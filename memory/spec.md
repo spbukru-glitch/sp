@@ -18,5 +18,5 @@ Public-facing global legal consultancy website with a premium, trustworthy legal
 - Admin session is an httpOnly cookie; logout revokes it in the current backend process.
 
 ## Intentional demo limits
-- Payment is guidance-only: UPI and PhonePe instructions are displayed; no payment gateway is connected.
+- Payment is guidance-only: UPI and the supplied PhonePe QR are displayed; no payment gateway is connected.
 - The booking form stores the selected document filename as a reference; binary document storage is not connected.
