@@ -307,7 +307,7 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-r from-[#020617] via-[#020617]/82 to-[#0f172a]/20" />
           <div className="relative mx-auto grid min-h-[650px] max-w-7xl items-end gap-10 px-5 pb-20 pt-24 lg:grid-cols-12 lg:px-8 lg:pb-28">
             <div className="animate-fade-up lg:col-span-8" data-testid="hero-copy">
-              <SectionLabel light testId="hero-eyebrow">{t.heroEyebrow}</SectionLabel>
+              <p className="mb-6 inline-flex items-center gap-3 border border-[#f4cd86]/70 bg-[#d7a652] px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.2em] text-[#071426] shadow-[0_8px_30px_rgba(215,166,82,.28)] backdrop-blur-sm sm:text-sm" data-testid="hero-eyebrow"><span className="size-1.5 rounded-full bg-[#071426] shadow-[0_0_0_4px_rgba(7,20,38,.12)]" />{t.heroEyebrow}</p>
               <h1 id="hero-title" className="max-w-4xl font-heading text-5xl leading-[.98] tracking-tight text-white sm:text-6xl lg:text-8xl" data-testid="hero-title"><span data-testid="hero-title-primary">{t.heroFirst}</span><br /><em className="font-normal text-[#d7a652]" data-testid="hero-title-secondary">{t.heroSecond}</em></h1>
               <p className="mt-8 max-w-xl text-base leading-8 text-slate-200 sm:text-lg" data-testid="hero-description">{t.heroBody}</p>
               <div className="mt-10 flex flex-wrap items-center gap-4">
