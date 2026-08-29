@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   ArrowUpRight,
@@ -11,6 +11,7 @@ import {
   ChevronRight,
   CircleDollarSign,
   Clock3,
+  Download,
   FileText,
   Globe2,
   Gavel,
@@ -34,7 +35,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { apiPost } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 
 interface Booking {
   id: string;
@@ -59,7 +60,8 @@ interface BookingPayload {
   document_name?: string;
 }
 
-interface PricingItem { name: string; fee: string; group: string }
+interface PriceItem { id: string; name: string; fee: string; group: string; sort_order: number }
+type PricingEntry = Pick<PriceItem, "name" | "fee" | "group">;
 
 const expertise = [
   { icon: Gavel, title: "Dispute Resolution", body: "Litigation management, arbitration, mediation, civil and criminal disputes." },
@@ -70,7 +72,7 @@ const expertise = [
   { icon: Globe2, title: "Global Legal Support", body: "International dispute resolution, IP protection and multi-jurisdictional advice." },
 ];
 
-const pricing: PricingItem[] = [
+const pricing: PricingEntry[] = [
   { name: "Initial online consultation (10 min)", fee: "₹199", group: "Consultation" },
   { name: "Detailed online consultation (30 min)", fee: "₹499", group: "Consultation" },
   { name: "Detailed online consultation (1 hour)", fee: "₹999", group: "Consultation" },
@@ -119,6 +121,8 @@ const navItems = [
   ["About", "about"], ["Expertise", "expertise"], ["Pricing", "pricing"], ["How it works", "process"], ["Contact", "contact"],
 ];
 
+const priceCategories = ["All", "Consultation", "Corporate", "Disputes", "Property", "Compliance", "Global", "Projects", "Employment", "Government", "Drafting", "Access"];
+
 const PHONEPE_QR_URL = "https://customer-assets-0z36b82j.emergentagent.net/job_legal-one-roof/artifacts/l7dh0l55_qr.html.png";
 
 function Logo({ light = false }: { light?: boolean }) {
@@ -140,8 +144,10 @@ function SectionLabel({ children, light = false, testId }: { children: string; l
 export default function Home() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [priceSearch, setPriceSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
   const [documentName, setDocumentName] = useState("");
   const [form, setForm] = useState<BookingPayload>({ full_name: "", mobile: "", email: "", mode: "Online video / audio call", slot: "", issue_description: "" });
+  const pricingQuery = useQuery({ queryKey: ["pricing"], queryFn: () => apiGet<PriceItem[]>("/pricing"), retry: false });
 
   const bookingMutation = useMutation({
     mutationFn: (payload: BookingPayload) => apiPost<Booking>("/bookings", payload),
@@ -153,8 +159,18 @@ export default function Home() {
     onError: () => toast.error("We could not send your request", { description: "Please call or WhatsApp us directly." }),
   });
 
-  const filteredPricing = pricing.filter((item) => item.name.toLowerCase().includes(priceSearch.toLowerCase()) || item.group.toLowerCase().includes(priceSearch.toLowerCase()));
+  const pricingEntries: PricingEntry[] = pricingQuery.isError ? pricing : (pricingQuery.data ?? pricing);
+  const filteredPricing = pricingEntries.filter((item) => {
+    const matchesSearch = item.name.toLowerCase().includes(priceSearch.toLowerCase()) || item.group.toLowerCase().includes(priceSearch.toLowerCase());
+    const matchesCategory = selectedCategory === "All" || item.group === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
   const updateField = (field: keyof BookingPayload, value: string) => setForm((current) => ({ ...current, [field]: value } as BookingPayload));
+  const requestQuote = (service: string) => {
+    setForm((current) => ({ ...current, issue_description: `I would like a tailored quote for ${service}. Please contact me to confirm the scope and fee.` }));
+    document.getElementById("booking")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    toast.info("Quote request prepared", { description: "Add your contact details and send the consultation request." });
+  };
   const submitBooking = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); bookingMutation.mutate({ ...form, document_name: documentName || undefined }); };
 
   return (
@@ -208,7 +224,7 @@ export default function Home() {
 
         <section id="expertise" className="bg-[#eef2f6] px-5 py-24 lg:px-8 lg:py-32" data-testid="expertise-section"><div className="mx-auto max-w-7xl"><div className="flex flex-col justify-between gap-8 md:flex-row md:items-end"><div><SectionLabel testId="expertise-eyebrow">Our core expertise</SectionLabel><h2 className="max-w-2xl font-heading text-4xl leading-tight sm:text-5xl" data-testid="expertise-title">Legal counsel that moves with the real world.</h2></div><p className="max-w-sm text-sm leading-7 text-slate-600" data-testid="expertise-description">From individual rights to multinational operations, our service integration model keeps every moving part visible and accountable.</p></div><div className="mt-14 grid gap-px bg-slate-300 md:grid-cols-2 lg:grid-cols-3">{expertise.map(({ icon: Icon, title, body }, index) => <article className="group bg-[#eef2f6] p-7 transition-[background-color,transform] duration-300 hover:-translate-y-1 hover:bg-white lg:p-9" key={title} data-testid={`expertise-card-${index + 1}`}><Icon className="size-8 stroke-[1.25] text-[#b45309] transition-transform duration-300 group-hover:-translate-y-1" /><h3 className="mt-9 font-heading text-2xl" data-testid={`expertise-card-title-${index + 1}`}>{title}</h3><p className="mt-3 text-sm leading-7 text-slate-600" data-testid={`expertise-card-description-${index + 1}`}>{body}</p><a href="#booking" className="mt-7 inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em] text-[#92400e]" data-testid={`expertise-card-link-${index + 1}`}>Discuss this area <ArrowUpRight className="size-3.5" /></a></article>)}</div></div></section>
 
-        <section id="pricing" className="mx-auto max-w-7xl px-5 py-24 lg:px-8 lg:py-32" data-testid="pricing-section"><div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end"><div><SectionLabel testId="pricing-eyebrow">Transparent & fair</SectionLabel><h2 className="font-heading text-4xl leading-tight sm:text-5xl" data-testid="pricing-title">A clear starting point<br />for every matter.</h2><p className="mt-5 max-w-lg text-sm leading-7 text-slate-600" data-testid="pricing-description">No hidden charges. Travelling and court miscellaneous expenses are extra. Every engagement begins with clarity.</p><p className="mt-3 text-xs font-medium uppercase tracking-[0.14em] text-[#b45309]" data-testid="pricing-catalogue-count">{pricing.length} service & pricing entries</p></div><div className="w-full max-w-sm"><label className="mb-2 block text-xs font-medium uppercase tracking-[0.14em] text-slate-500" htmlFor="pricing-search" data-testid="pricing-search-label">Find a service</label><div className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" /><Input id="pricing-search" value={priceSearch} onChange={(event) => setPriceSearch(event.target.value)} placeholder="Search consultation, audit..." className="h-12 rounded-none border-slate-300 bg-white pl-10" data-testid="pricing-search-input" /></div></div></div><div className="mt-12 overflow-hidden border border-slate-200 bg-white" data-testid="pricing-table"><div className="grid grid-cols-[1fr_auto] border-b border-slate-200 bg-[#0f172a] px-5 py-4 text-xs font-medium uppercase tracking-[0.14em] text-slate-300 sm:grid-cols-[1fr_180px_140px]"><span data-testid="pricing-table-service-heading">Service</span><span className="hidden sm:block" data-testid="pricing-table-category-heading">Category</span><span className="text-right" data-testid="pricing-table-fee-heading">Fee</span></div><div className="max-h-[620px] overflow-y-auto">{filteredPricing.map((item, index) => <div className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-slate-100 px-5 py-4 transition-colors hover:bg-[#fffaf2] sm:grid-cols-[1fr_180px_140px]" key={`${item.name}-${index}`} data-testid={`pricing-row-${index + 1}`}><span className="text-sm leading-6 text-slate-700" data-testid={`pricing-service-${index + 1}`}>{item.name}</span><span className="hidden text-xs uppercase tracking-[0.12em] text-slate-400 sm:block" data-testid={`pricing-category-${index + 1}`}>{item.group}</span><span className="text-right font-heading text-lg text-[#92400e]" data-testid={`pricing-fee-${index + 1}`}>{item.fee}</span></div>)}{filteredPricing.length === 0 && <p className="p-8 text-center text-sm text-slate-500" data-testid="pricing-empty-state">No matching services. Try another search term.</p>}</div></div></section>
+        <section id="pricing" className="mx-auto max-w-7xl px-5 py-24 lg:px-8 lg:py-32" data-testid="pricing-section"><div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end"><div><SectionLabel testId="pricing-eyebrow">Transparent & fair</SectionLabel><h2 className="font-heading text-4xl leading-tight sm:text-5xl" data-testid="pricing-title">A clear starting point<br />for every matter.</h2><p className="mt-5 max-w-lg text-sm leading-7 text-slate-600" data-testid="pricing-description">No hidden charges. Travelling and court miscellaneous expenses are extra. Every engagement begins with clarity.</p><p className="mt-3 text-xs font-medium uppercase tracking-[0.14em] text-[#b45309]" data-testid="pricing-catalogue-count">{pricingEntries.length} service & pricing entries</p></div><div className="w-full max-w-sm"><label className="mb-2 block text-xs font-medium uppercase tracking-[0.14em] text-slate-500" htmlFor="pricing-search" data-testid="pricing-search-label">Find a service</label><div className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" /><Input id="pricing-search" value={priceSearch} onChange={(event) => setPriceSearch(event.target.value)} placeholder="Search consultation, audit..." className="h-12 rounded-none border-slate-300 bg-white pl-10" data-testid="pricing-search-input" /></div></div></div><div className="mt-8 flex gap-2 overflow-x-auto pb-2" role="group" aria-label="Filter price list by category" data-testid="pricing-category-filters">{priceCategories.map((category) => <button type="button" key={category} onClick={() => setSelectedCategory(category)} aria-pressed={selectedCategory === category} className={`shrink-0 border px-3 py-2 text-xs font-medium uppercase tracking-[0.12em] transition-[background-color,border-color,color,transform] duration-200 hover:-translate-y-0.5 ${selectedCategory === category ? "border-[#0f172a] bg-[#0f172a] text-white hover:text-white" : "border-slate-300 bg-white text-slate-500 hover:border-[#b45309] hover:text-[#92400e]"}`} data-testid={`pricing-category-filter-${category.toLowerCase()}`}>{category}</button>)}</div><div className="mt-4 flex flex-wrap items-center justify-between gap-4"><p className="text-xs text-slate-400" data-testid="pricing-filter-count">Showing {filteredPricing.length} of {pricingEntries.length} entries</p><a href="/api/price-list.pdf" download="splegalmart-price-list.pdf" className="inline-flex items-center gap-2 border-b border-[#b45309] pb-2 text-xs font-medium uppercase tracking-[0.14em] text-[#92400e] transition-[gap] hover:gap-3" data-testid="download-price-list-link">Download price list <Download className="size-4" /></a></div><div className="mt-5 overflow-hidden border border-slate-200 bg-white" data-testid="pricing-table"><div className="grid grid-cols-[1fr_auto] border-b border-slate-200 bg-[#0f172a] px-5 py-4 text-xs font-medium uppercase tracking-[0.14em] text-slate-300 sm:grid-cols-[1fr_180px_140px]"><span data-testid="pricing-table-service-heading">Service</span><span className="hidden sm:block" data-testid="pricing-table-category-heading">Category</span><span className="text-right" data-testid="pricing-table-fee-heading">Fee</span></div><div className="max-h-[620px] overflow-y-auto">{filteredPricing.map((item, index) => <div className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-slate-100 px-5 py-4 transition-colors hover:bg-[#fffaf2] sm:grid-cols-[1fr_180px_180px]" key={`${item.name}-${index}`} data-testid={`pricing-row-${index + 1}`}><span className="text-sm leading-6 text-slate-700" data-testid={`pricing-service-${index + 1}`}>{item.name}</span><span className="hidden text-xs uppercase tracking-[0.12em] text-slate-400 sm:block" data-testid={`pricing-category-${index + 1}`}>{item.group}</span><div className="text-right"><span className="block font-heading text-lg text-[#92400e]" data-testid={`pricing-fee-${index + 1}`}>{item.fee}</span>{item.fee === "Quote after review" && <button type="button" onClick={() => requestQuote(item.name)} className="mt-1 text-[10px] font-medium uppercase tracking-[0.12em] text-[#b45309] underline-offset-4 transition-colors hover:text-[#78350f] hover:underline" data-testid={`request-quote-button-${index + 1}`}>Request quote</button>}</div></div>)}{filteredPricing.length === 0 && <p className="p-8 text-center text-sm text-slate-500" data-testid="pricing-empty-state">No matching services for this search and category.</p>}</div></div></section>
 
         <section className="noise-dark bg-[#0f172a] px-5 py-24 text-white lg:px-8 lg:py-28" data-testid="mission-section"><div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-12 lg:gap-20"><div className="lg:col-span-5"><SectionLabel light testId="mission-eyebrow">Our purpose</SectionLabel><h2 className="font-heading text-4xl leading-tight sm:text-5xl" data-testid="mission-title">Simplify the difficult. Protect what matters.</h2><p className="mt-7 text-base leading-8 text-slate-300" data-testid="mission-copy">Our mission is to provide accessible, affordable, and professional legal solutions globally — protecting interests, resolving challenges, and making confident legal action possible regardless of location.</p></div><div className="grid gap-8 border-t border-white/15 pt-8 sm:grid-cols-3 lg:col-span-6 lg:col-start-7 lg:border-t-0 lg:pt-0"><article data-testid="mission-card"><Target className="size-6 text-[#d7a652]" /><h3 className="mt-5 font-heading text-2xl" data-testid="mission-card-title">Mission</h3><p className="mt-3 text-sm leading-6 text-slate-400" data-testid="mission-card-copy">Timely, practical, result-oriented assistance for every client.</p></article><article data-testid="vision-card"><Globe2 className="size-6 text-[#d7a652]" /><h3 className="mt-5 font-heading text-2xl" data-testid="vision-card-title">Vision</h3><p className="mt-3 text-sm leading-6 text-slate-400" data-testid="vision-card-copy">Ethical, innovative and exceptional legal service on a national and international scale.</p></article><article data-testid="values-card"><Handshake className="size-6 text-[#d7a652]" /><h3 className="mt-5 font-heading text-2xl" data-testid="values-card-title">Values</h3><p className="mt-3 text-sm leading-6 text-slate-400" data-testid="values-card-copy">Integrity, excellence, confidentiality, accountability and a client-first approach.</p></article></div></div></section>
 

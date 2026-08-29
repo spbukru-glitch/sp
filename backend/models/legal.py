@@ -36,3 +36,17 @@ class AdminOverview(BaseModel):
     service_count: int
     pricing_count: int
     content_sections: int
+
+
+class PriceItem(BaseModel):
+    id: str
+    name: str
+    fee: str
+    group: str
+    sort_order: int
+
+
+class PriceItemUpdate(BaseModel):
+    name: str = Field(min_length=2, max_length=240)
+    fee: str = Field(min_length=1, max_length=80)
+    group: str = Field(min_length=2, max_length=80)

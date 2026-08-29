@@ -1,5 +1,6 @@
 import os
 import secrets
+import textwrap
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Cookie, HTTPException, Request, Response, status
@@ -11,13 +12,70 @@ from models.legal import (
     AdminOverview,
     Booking,
     BookingCreate,
+    PriceItem,
+    PriceItemUpdate,
 )
 
 router = APIRouter()
 _admin_sessions: set[str] = set()
 _service_count = 6
-_pricing_count = 42
 _content_sections = 8
+
+PRICE_LIST = [
+    ("Initial online consultation (10 min)", "Rs. 199"),
+    ("Detailed online consultation (30 min)", "Rs. 499"),
+    ("Detailed online consultation (1 hour)", "Rs. 999"),
+    ("Office / offline consultation (1 hour)", "Rs. 999"),
+    ("Drafting / vetting up to 3 pages", "Rs. 999"),
+    ("Drafting / vetting over 3-10 pages", "Rs. 4,999"),
+    ("Drafting / vetting over 10 pages", "Rs. 9,999"),
+    ("Complete case management (annually)", "Rs. 9,999"),
+    ("Complete case management (one time)", "Rs. 49,999"),
+    ("Corporate retainer (monthly)", "Rs. 4,999"),
+    ("Corporate legal audit (one time)", "Rs. 9,999"),
+    ("Property document vetting up to 5 pages", "Rs. 999"),
+    ("Property document vetting over 5 pages", "Rs. 4,999"),
+    ("Government representation & liaisoning (annual)", "Rs. 9,999"),
+    ("EPC / JV / MOU commercial contracts", "0.5% of project cost"),
+    ("EPC project compliance monitoring", "1% of project cost"),
+    ("Employment & service disputes (annual)", "Rs. 9,999"),
+    ("Employment & service disputes (one time)", "Rs. 49,999"),
+    ("International dispute resolution", "1% of cost involved"),
+    ("IP protection (annual)", "Rs. 9,999"),
+    ("Corporate legal training", "Rs. 4,999"),
+    ("Arbitration & mediation (annual)", "Rs. 9,999"),
+    ("Arbitration & mediation (one time)", "Rs. 49,999"),
+    ("Domestic enquiry services", "Rs. 9,999"),
+    ("Custom / GST / income tax / EPF / ESI filing", "Rs. 499 per filing"),
+    ("Corporate legal audit & risk analysis", "Rs. 9,999"),
+    ("Investigation & fact-finding services", "Rs. 9,999"),
+    ("Regulatory & environmental approvals", "Rs. 4,999 monthly"),
+    ("Criminal / family / property / civil matters (annual)", "Rs. 9,999"),
+    ("Criminal / family / property / civil matters (one time)", "Rs. 49,999"),
+    ("Factory establishment & labour compliance", "1% of project cost"),
+    ("Land verification, acquisition & registration", "0.5% of cost"),
+    ("Company registration & MCA compliance", "Rs. 1,999"),
+    ("Court representation - district / High Court / tribunals", "Rs. 999"),
+    ("Government tender & contract assistance", "0.5% of cost"),
+    ("Door-to-door service / per visit", "Rs. 999 + travel"),
+    ("Cross-border corporate & commercial law - entity formation, governance, M&A and tax structuring", "Quote after review"),
+    ("Global regulatory compliance - GDPR, CCPA, AML and industry certifications", "Quote after review"),
+    ("Employment & mobility - global workforce compliance, contracts and immigration", "Quote after review"),
+    ("Approval & completion compliance monitoring", "Quote after review"),
+    ("Corporate retainer service (monthly)", "Rs. 4,999"),
+    ("Cross-border corporate law", "Quote after review"),
+]
+
+PRICE_GROUPS = [
+    "Consultation", "Consultation", "Consultation", "Consultation",
+    "Drafting", "Drafting", "Drafting", "Disputes", "Disputes",
+    "Corporate", "Corporate", "Property", "Property", "Government",
+    "Projects", "Projects", "Employment", "Employment", "Global", "Global",
+    "Corporate", "Disputes", "Disputes", "Employment", "Compliance",
+    "Compliance", "Compliance", "Compliance", "Disputes", "Disputes",
+    "Projects", "Property", "Corporate", "Government", "Government", "Access",
+    "Global", "Compliance", "Employment", "Projects", "Corporate", "Global",
+]
 
 
 def _require_admin(admin_session: str | None) -> None:
@@ -32,11 +90,101 @@ def _normalise_booking(document: dict) -> Booking:
     return Booking(**document)
 
 
+async def _ensure_pricing_seeded() -> None:
+    if await db.pricing.count_documents({}) > 0:
+        return
+    documents = [
+        {
+            "id": f"price-{index:03d}",
+            "name": name,
+            "fee": fee.replace("Rs. ", "₹"),
+            "group": PRICE_GROUPS[index - 1],
+            "sort_order": index,
+        }
+        for index, (name, fee) in enumerate(PRICE_LIST, start=1)
+    ]
+    await db.pricing.insert_many(documents)
+
+
+def _pdf_text(value: str) -> str:
+    replacements = {"₹": "Rs. ", "–": "-", "—": "-", "’": "'", "“": '"', "”": '"'}
+    for old, new in replacements.items():
+        value = value.replace(old, new)
+    return "".join(character if ord(character) < 128 else "?" for character in value)
+
+
+def _make_price_list_pdf(items: list[tuple[str, str]]) -> bytes:
+    lines = [
+        "SpLegalMart Global Legal Services",
+        "Transparent & Fair Price List | 2026",
+        "UPI: 7992461191@ybl | No hidden charges",
+        "",
+    ]
+    for number, (service, fee) in enumerate(items, start=1):
+        wrapped = textwrap.wrap(_pdf_text(service), width=68) or [""]
+        lines.append(f"{number:02d}. {wrapped[0]}  [{_pdf_text(fee)}]")
+        lines.extend(f"    {continuation}" for continuation in wrapped[1:])
+    lines.extend(["", "Travelling and court miscellaneous expenses extra.", "Scope-based quotes are confirmed after reviewing the matter."])
+
+    page_lines = [lines[index:index + 45] for index in range(0, len(lines), 45)]
+    objects: list[bytes] = []
+    objects.append(b"<< /Type /Catalog /Pages 2 0 R >>")
+    page_object_numbers = [6 + index * 2 for index in range(len(page_lines))]
+    kids = " ".join(f"{number} 0 R" for number in page_object_numbers)
+    objects.append(f"<< /Type /Pages /Kids [{kids}] /Count {len(page_lines)} >>".encode())
+    objects.append(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
+    objects.append(b"<< /Producer (SpLegalMart) >>")
+
+    for index, page in enumerate(page_lines):
+        content = ["BT", "/F1 17 Tf", "42 748 Td", f"({_pdf_text(page[0])}) Tj", "/F1 9 Tf", "0 -23 Td"]
+        for line in page[1:]:
+            escaped = _pdf_text(line).replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+            content.append(f"0 -14 Td ({escaped}) Tj")
+        content.append("ET")
+        stream = "\n".join(content).encode("ascii", "replace")
+        objects.append(f"<< /Length {len(stream)} >>\nstream\n".encode() + stream + b"\nendstream")
+        content_number = 5 + index * 2
+        objects.append(f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents {content_number} 0 R >>".encode())
+
+    pdf = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+    offsets = [0]
+    for number, obj in enumerate(objects, start=1):
+        offsets.append(len(pdf))
+        pdf.extend(f"{number} 0 obj\n".encode())
+        pdf.extend(obj)
+        pdf.extend(b"\nendobj\n")
+    xref_offset = len(pdf)
+    pdf.extend(f"xref\n0 {len(objects) + 1}\n".encode())
+    pdf.extend(b"0000000000 65535 f \n")
+    for offset in offsets[1:]:
+        pdf.extend(f"{offset:010d} 00000 n \n".encode())
+    pdf.extend(f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF".encode())
+    return bytes(pdf)
+
+
 @router.post("/bookings", response_model=Booking, status_code=status.HTTP_201_CREATED)
 async def create_booking(payload: BookingCreate) -> Booking:
     booking = Booking(**payload.model_dump())
     await db.bookings.insert_one(booking.model_dump())
     return booking
+
+
+@router.get("/pricing", response_model=list[PriceItem])
+async def public_pricing() -> list[PriceItem]:
+    await _ensure_pricing_seeded()
+    documents = await db.pricing.find().sort("sort_order", 1).to_list(1000)
+    return [PriceItem(**document) for document in documents]
+
+
+@router.get("/price-list.pdf", response_class=Response)
+async def download_price_list() -> Response:
+    await _ensure_pricing_seeded()
+    documents = await db.pricing.find().sort("sort_order", 1).to_list(1000)
+    return Response(
+        content=_make_price_list_pdf([(document["name"], document["fee"]) for document in documents]),
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="splegalmart-price-list.pdf"'},
+    )
 
 
 @router.post("/admin/login", response_model=AdminLoginResponse)
@@ -68,13 +216,15 @@ async def admin_logout(response: Response, admin_session: str | None = Cookie(de
 @router.get("/admin/overview", response_model=AdminOverview)
 async def admin_overview(admin_session: str | None = Cookie(default=None)) -> AdminOverview:
     _require_admin(admin_session)
+    await _ensure_pricing_seeded()
     total = await db.bookings.count_documents({})
     new = await db.bookings.count_documents({"status": "new"})
+    pricing_count = await db.pricing.count_documents({})
     return AdminOverview(
         total_bookings=total,
         new_bookings=new,
         service_count=_service_count,
-        pricing_count=_pricing_count,
+        pricing_count=pricing_count,
         content_sections=_content_sections,
     )
 
@@ -84,3 +234,21 @@ async def admin_bookings(admin_session: str | None = Cookie(default=None)) -> li
     _require_admin(admin_session)
     documents = await db.bookings.find().sort("created_at", -1).to_list(1000)
     return [_normalise_booking(document) for document in documents]
+
+
+@router.patch("/admin/pricing/{id}", response_model=PriceItem)
+async def update_price_item(
+    id: str,
+    payload: PriceItemUpdate,
+    admin_session: str | None = Cookie(default=None),
+) -> PriceItem:
+    _require_admin(admin_session)
+    await _ensure_pricing_seeded()
+    updated = await db.pricing.find_one_and_update(
+        {"id": id},
+        {"$set": payload.model_dump()},
+        return_document=True,
+    )
+    if not updated:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pricing item not found")
+    return PriceItem(**updated)
