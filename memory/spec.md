@@ -13,6 +13,9 @@ The public catalogue contains 42 service and pricing entries, including fixed-fe
 1. Visitor uses the sticky navigation or hero CTA to jump to services, pricing, or booking.
 2. Visitor submits a consultation request; it is persisted in MongoDB and a success toast confirms receipt.
 3. `/admin` accepts the demo password and shows booking totals, content/service counts, and the latest booking table.
+4. Admins can progress bookings through New, Contacted, Paid, Completed, and Closed states.
+5. Admins can edit pricing and core About/Mission/Vision/Values/Contact content; public queries fall back to bundled defaults if the backend is unavailable.
+6. Visitors can search legal guides, read expanded guidance, and download the supplied PhonePe QR.
 
 ## Auth and roles
 - One demo admin role, password-protected at `/api/admin/login`.

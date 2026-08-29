@@ -3,6 +3,7 @@ import secrets
 import textwrap
 from datetime import datetime, timezone
 
+import httpx
 from fastapi import APIRouter, Cookie, HTTPException, Request, Response, status
 
 from lib.db import db
@@ -12,14 +13,32 @@ from models.legal import (
     AdminOverview,
     Booking,
     BookingCreate,
+    BookingStatusUpdate,
     PriceItem,
     PriceItemUpdate,
+    SiteContent,
+    SiteContentUpdate,
 )
 
 router = APIRouter()
 _admin_sessions: set[str] = set()
 _service_count = 6
 _content_sections = 8
+PAYMENT_QR_URL = "https://customer-assets-0z36b82j.emergentagent.net/job_legal-one-roof/artifacts/l7dh0l55_qr.html.png"
+
+DEFAULT_CONTENT = {
+    "id": "site-content",
+    "about": "SpLegalMart is a premier international legal consultancy and service integration platform. Every legal matter is unique; we understand the circumstances, identify the right strategy, and work diligently toward a successful outcome.",
+    "mission": "Our mission is to provide accessible, affordable, and professional legal solutions globally — protecting interests, resolving challenges, and making confident legal action possible regardless of location.",
+    "vision": "Ethical, innovative and exceptional legal service on a national and international scale.",
+    "values": "Integrity, excellence, confidentiality, accountability and a client-first approach.",
+    "head_office": "Bawana, Delhi – 110040, India",
+    "branch_office": "Bukru, Kanke, Ranchi, Jharkhand – 834006, India",
+    "phone": "+91 7992461191 / 9650323162",
+    "whatsapp": "+91 7992461191",
+    "email": "splegalmart@gmail.com",
+    "hours": "24/7 — round the clock",
+}
 
 PRICE_LIST = [
     ("Initial online consultation (10 min)", "Rs. 199"),
@@ -106,6 +125,12 @@ async def _ensure_pricing_seeded() -> None:
     await db.pricing.insert_many(documents)
 
 
+async def _ensure_content_seeded() -> None:
+    if await db.site_content.find_one({"id": "site-content"}):
+        return
+    await db.site_content.insert_one(DEFAULT_CONTENT.copy())
+
+
 def _pdf_text(value: str) -> str:
     replacements = {"₹": "Rs. ", "–": "-", "—": "-", "’": "'", "“": '"', "”": '"'}
     for old, new in replacements.items():
@@ -176,6 +201,13 @@ async def public_pricing() -> list[PriceItem]:
     return [PriceItem(**document) for document in documents]
 
 
+@router.get("/content", response_model=SiteContent)
+async def public_content() -> SiteContent:
+    await _ensure_content_seeded()
+    document = await db.site_content.find_one({"id": "site-content"})
+    return SiteContent(**document)
+
+
 @router.get("/price-list.pdf", response_class=Response)
 async def download_price_list() -> Response:
     await _ensure_pricing_seeded()
@@ -184,6 +216,19 @@ async def download_price_list() -> Response:
         content=_make_price_list_pdf([(document["name"], document["fee"]) for document in documents]),
         media_type="application/pdf",
         headers={"Content-Disposition": 'attachment; filename="splegalmart-price-list.pdf"'},
+    )
+
+
+@router.get("/payment-qr.png", response_class=Response)
+async def download_payment_qr() -> Response:
+    async with httpx.AsyncClient(timeout=15) as client:
+        upstream = await client.get(PAYMENT_QR_URL)
+    if not upstream.is_success:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Payment QR is temporarily unavailable")
+    return Response(
+        content=upstream.content,
+        media_type="image/png",
+        headers={"Content-Disposition": 'attachment; filename="splegalmart-phonepe-qr.png"'},
     )
 
 
@@ -236,6 +281,23 @@ async def admin_bookings(admin_session: str | None = Cookie(default=None)) -> li
     return [_normalise_booking(document) for document in documents]
 
 
+@router.patch("/admin/bookings/{id}/status", response_model=Booking)
+async def update_booking_status(
+    id: str,
+    payload: BookingStatusUpdate,
+    admin_session: str | None = Cookie(default=None),
+) -> Booking:
+    _require_admin(admin_session)
+    updated = await db.bookings.find_one_and_update(
+        {"id": id},
+        {"$set": {"status": payload.status}},
+        return_document=True,
+    )
+    if not updated:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+    return _normalise_booking(updated)
+
+
 @router.patch("/admin/pricing/{id}", response_model=PriceItem)
 async def update_price_item(
     id: str,
@@ -252,3 +314,18 @@ async def update_price_item(
     if not updated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pricing item not found")
     return PriceItem(**updated)
+
+
+@router.patch("/admin/content", response_model=SiteContent)
+async def update_site_content(
+    payload: SiteContentUpdate,
+    admin_session: str | None = Cookie(default=None),
+) -> SiteContent:
+    _require_admin(admin_session)
+    await _ensure_content_seeded()
+    updated = await db.site_content.find_one_and_update(
+        {"id": "site-content"},
+        {"$set": payload.model_dump()},
+        return_document=True,
+    )
+    return SiteContent(**updated)

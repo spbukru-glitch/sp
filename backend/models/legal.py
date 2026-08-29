@@ -17,8 +17,12 @@ class BookingCreate(BaseModel):
 
 class Booking(BookingCreate):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    status: Literal["new", "contacted", "closed"] = "new"
+    status: Literal["new", "contacted", "paid", "completed", "closed"] = "new"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class BookingStatusUpdate(BaseModel):
+    status: Literal["new", "contacted", "paid", "completed", "closed"]
 
 
 class AdminLoginRequest(BaseModel):
@@ -50,3 +54,20 @@ class PriceItemUpdate(BaseModel):
     name: str = Field(min_length=2, max_length=240)
     fee: str = Field(min_length=1, max_length=80)
     group: str = Field(min_length=2, max_length=80)
+
+
+class SiteContent(BaseModel):
+    about: str
+    mission: str
+    vision: str
+    values: str
+    head_office: str
+    branch_office: str
+    phone: str
+    whatsapp: str
+    email: str
+    hours: str
+
+
+class SiteContentUpdate(SiteContent):
+    pass
