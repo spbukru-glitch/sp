@@ -34,7 +34,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { apiGet, apiPost } from "@/lib/api";
+import { apiGet, apiPost, apiPostForm } from "@/lib/api";
 
 interface Booking {
   id: string;
@@ -45,9 +45,13 @@ interface Booking {
   slot: string;
   issue_description: string;
   document_name?: string | null;
-  status: string;
+  status: BookingStatus;
   created_at: string;
+  history: BookingEvent[];
 }
+
+interface BookingEvent { status: BookingStatus; changed_at: string }
+interface BookingDocumentInfo { id: string; booking_id: string; filename: string; content_type: string; size: number; uploaded_at: string }
 
 interface BookingPayload {
   full_name: string;
@@ -65,7 +69,7 @@ interface SiteContent { about: string; mission: string; vision: string; values: 
 interface LegalArticle { id: string; title: string; topic: string; summary: string; points: string[] }
 type BookingStatus = "new" | "contacted" | "paid" | "completed" | "closed";
 interface BookingTrackRequest { id: string; mobile: string }
-interface BookingTracking { id: string; full_name: string; status: BookingStatus; mode: string; slot: string; created_at: string }
+interface BookingTracking { id: string; full_name: string; status: BookingStatus; mode: string; slot: string; created_at: string; history: BookingEvent[] }
 
 const expertise = [
   { icon: Gavel, title: "Dispute Resolution", body: "Litigation management, arbitration, mediation, civil and criminal disputes." },
@@ -154,7 +158,7 @@ const defaultSiteContent: SiteContent = {
   trust_image: "https://customer-assets-0z36b82j.emergentagent.net/job_legal-one-roof/artifacts/yz8fbppw_ChatGPT%20Image%20Jul%2021%2C%202026%2C%2009_32_21%20PM.png",
   leader_image: "https://customer-assets-0z36b82j.emergentagent.net/job_legal-one-roof/artifacts/1zhoepda_photo.jpg",
   leader_name: "Mr. Shailendra Pandey",
-  leader_title: "Founder & Lead Legal Consultant",
+  leader_title: "Leader",
 };
 
 const legalArticles: LegalArticle[] = [
@@ -169,6 +173,19 @@ const legalArticles: LegalArticle[] = [
   { id: "human-rights", title: "Human rights", topic: "Rights", summary: "Recognize available constitutional and statutory protections and the right forum for relief.", points: ["Record the incident, authority involved, dates, witnesses, and supporting material.", "Identify urgent safety, medical, custody, or preservation needs.", "Choose the competent court, commission, or statutory authority for relief."] },
   { id: "legal-agreements", title: "Legal agreements", topic: "Contracts", summary: "Turn commercial intent into practical obligations, safeguards, and enforceable remedies.", points: ["Define scope, milestones, payment, acceptance, and change control.", "Allocate confidentiality, IP, liability, indemnity, and termination risk.", "Use workable dispute, governing-law, and notice provisions."] },
 ];
+
+const hindiArticles: Record<string, Omit<LegalArticle, "id">> = {
+  "civil-suits": { title: "दीवानी मुकदमे", topic: "मुकदमेबाजी", summary: "दीवानी दावे के दस्तावेज़, समय-सीमा, अधिकार क्षेत्र और मुख्य चरण समझें।", points: ["अनुबंध, नोटिस, रसीदें और नुकसान के प्रमाण सुरक्षित रखें।", "मुकदमा दायर करने से पहले क्षेत्रीय और आर्थिक अधिकार क्षेत्र जांचें।", "मुख्य वाद के साथ समझौता, मध्यस्थता और अंतरिम राहत पर विचार करें।"] },
+  "legal-notices": { title: "कानूनी नोटिस", topic: "ड्राफ्टिंग", summary: "जानें कि नोटिस कब उपयोगी है, उसमें क्या होना चाहिए और सुरक्षित उत्तर कैसे दें।", points: ["तथ्य, कानूनी आधार, मांग और उत्तर की समय-सीमा स्पष्ट लिखें।", "अनावश्यक स्वीकारोक्ति और भावनात्मक भाषा से बचें।", "डिलीवरी प्रमाण और बाद के सभी संवाद सुरक्षित रखें।"] },
+  "property-disputes": { title: "संपत्ति विवाद", topic: "संपत्ति", summary: "स्वामित्व, कब्जे, नामांतरण, सीमाओं और टाइटल विवादों की व्यावहारिक सूची।", points: ["टाइटल चेन, भार, राजस्व रिकॉर्ड और स्वीकृत नक्शे जांचें।", "कब्जे और हस्तक्षेप के दिनांकित प्रमाण रखें।", "हस्तांतरण से पहले आवश्यक निषेधाज्ञा पर शीघ्र सलाह लें।"] },
+  "bail-applications": { title: "जमानत आवेदन", topic: "आपराधिक कानून", summary: "नियमित या अग्रिम जमानत के लिए स्पष्ट घटनाक्रम और सहायक रिकॉर्ड तैयार करें।", points: ["एफआईआर, शिकायत, नोटिस, चिकित्सा रिकॉर्ड और पत्राचार जुटाएं।", "सहयोग, स्थानीय संबंध और फरार न होने के आधार स्पष्ट करें।", "हर आरोप और लागू वैधानिक रोक का सीधे उत्तर दें।"] },
+  "divorce-procedures": { title: "तलाक प्रक्रिया", topic: "पारिवारिक कानून", summary: "पारिवारिक और आर्थिक हितों की रक्षा करते हुए सहमति और विवादित प्रक्रिया समझें।", points: ["विवाह, निवास, आय, संपत्ति और बच्चों के रिकॉर्ड व्यवस्थित करें।", "भरण-पोषण, अभिरक्षा, निवास और संपत्ति के मुद्दे जल्दी पहचानें।", "सुरक्षा से समझौता किए बिना उचित मामलों में मध्यस्थता अपनाएं।"] },
+  "gst-compliance": { title: "जीएसटी अनुपालन", topic: "कर", summary: "सही रिकॉर्ड, मिलान और समय पर उत्तर से फाइलिंग जोखिम कम करें।", points: ["चालान, इनपुट टैक्स क्रेडिट, रिटर्न और लेजर का मिलान करें।", "हर फाइलिंग की समय-सीमा और पावती सुरक्षित रखें।", "वैधानिक उत्तर समय समाप्त होने से पहले नोटिस की समीक्षा करें।"] },
+  "company-registration": { title: "कंपनी पंजीकरण", topic: "कॉर्पोरेट", summary: "उचित संस्था चुनें और शासन, स्वामित्व तथा MCA फाइलिंग सही तैयार करें।", points: ["दायित्व, अनुपालन, कर, निवेश और निकास जरूरतों की तुलना करें।", "संस्थापक अधिकार, शेयरधारिता, भूमिकाएं और निर्णय प्रक्रिया लिखित रखें।", "वैधानिक रजिस्टर और आवर्ती MCA दायित्व समय पर पूरे करें।"] },
+  "labour-laws": { title: "श्रम कानून", topic: "रोजगार", summary: "अनुपालन योग्य रोजगार दस्तावेज़ और निष्पक्ष कार्यस्थल प्रक्रिया बनाएं।", points: ["स्पष्ट नियुक्ति पत्र, नीतियां, वेतन और उपस्थिति रिकॉर्ड रखें।", "अनुशासन से पहले प्राकृतिक न्याय और दर्ज जांच प्रक्रिया अपनाएं।", "EPF, ESI, ग्रेच्युटी, अवकाश और ठेकेदार अनुपालन जांचें।"] },
+  "human-rights": { title: "मानव अधिकार", topic: "अधिकार", summary: "उपलब्ध संवैधानिक सुरक्षा और राहत के सही मंच को पहचानें।", points: ["घटना, अधिकारी, तारीख, गवाह और सहायक सामग्री दर्ज करें।", "तत्काल सुरक्षा, चिकित्सा, हिरासत या संरक्षण की जरूरत पहचानें।", "उचित न्यायालय, आयोग या वैधानिक प्राधिकरण चुनें।"] },
+  "legal-agreements": { title: "कानूनी समझौते", topic: "अनुबंध", summary: "व्यावसायिक सहमति को स्पष्ट दायित्व, सुरक्षा और लागू उपचार में बदलें।", points: ["कार्यक्षेत्र, चरण, भुगतान, स्वीकृति और बदलाव प्रक्रिया तय करें।", "गोपनीयता, IP, दायित्व, क्षतिपूर्ति और समाप्ति जोखिम बांटें।", "व्यावहारिक विवाद, लागू कानून और नोटिस प्रावधान रखें।"] },
+};
 
 function Logo({ light = false }: { light?: boolean }) {
   return (
@@ -201,13 +218,26 @@ export default function Home() {
   const contentQuery = useQuery({ queryKey: ["site-content"], queryFn: () => apiGet<SiteContent>("/content"), retry: false });
 
   const bookingMutation = useMutation({
-    mutationFn: (payload: BookingPayload) => apiPost<Booking>("/bookings", payload),
+    mutationFn: async (payload: BookingPayload) => {
+      const booking = await apiPost<Booking>("/bookings", payload);
+      const fileInput = document.getElementById("document") as HTMLInputElement | null;
+      const file = fileInput?.files?.[0];
+      if (file) {
+        const upload = new FormData();
+        upload.append("mobile", booking.mobile);
+        upload.append("file", file);
+        await apiPostForm<BookingDocumentInfo>(`/bookings/${booking.id}/document`, upload);
+      }
+      return booking;
+    },
     onSuccess: (booking) => {
       setBookingReference(booking.id);
       setTrackForm({ id: booking.id, mobile: booking.mobile });
       toast.success("Consultation request received", { description: `Booking reference: ${booking.id}` });
       setForm({ full_name: "", mobile: "", email: "", mode: "Online video / audio call", slot: "", issue_description: "" });
       setDocumentName("");
+      const fileInput = document.getElementById("document") as HTMLInputElement | null;
+      if (fileInput) fileInput.value = "";
     },
     onError: () => toast.error("We could not send your request", { description: "Please call or WhatsApp us directly." }),
   });
@@ -219,8 +249,9 @@ export default function Home() {
   const pricingEntries: PricingEntry[] = pricingQuery.isError ? pricing : (pricingQuery.data ?? pricing);
   const siteContent = contentQuery.isError ? defaultSiteContent : (contentQuery.data ?? defaultSiteContent);
   const t = uiCopy[language];
-  const filteredArticles = legalArticles.filter((article) => `${article.title} ${article.topic} ${article.summary}`.toLowerCase().includes(articleSearch.toLowerCase()));
-  const selectedArticle = legalArticles.find((article) => article.id === selectedArticleId) ?? legalArticles[0];
+  const localizedArticles = legalArticles.map((article) => language === "hi" ? { ...article, ...hindiArticles[article.id] } : article);
+  const filteredArticles = localizedArticles.filter((article) => `${article.title} ${article.topic} ${article.summary}`.toLowerCase().includes(articleSearch.toLowerCase()));
+  const selectedArticle = localizedArticles.find((article) => article.id === selectedArticleId) ?? localizedArticles[0];
   const phoneHref = `tel:${siteContent.phone.split("/")[0].replace(/[^\d+]/g, "")}`;
   const whatsappHref = `https://wa.me/${siteContent.whatsapp.replace(/\D/g, "")}`;
   const filteredPricing = pricingEntries.filter((item) => {
@@ -330,6 +361,8 @@ export default function Home() {
         <section className="mx-auto grid max-w-7xl gap-16 px-5 py-24 lg:grid-cols-12 lg:px-8 lg:py-32" data-testid="csr-careers-section"><div className="lg:col-span-6"><SectionLabel testId="csr-eyebrow">Justice beyond the courtroom</SectionLabel><h2 className="font-heading text-4xl leading-tight sm:text-5xl" data-testid="csr-title">Good legal work should make room for good citizenship.</h2><div className="mt-10 space-y-5">{[[Leaf, "Free legal aid camps", "Rural legal assistance for underserved communities."], [BookOpen, "Legal literacy programs", "Workshops in schools and colleges on fundamental rights."], [Globe2, "Save life, save tree", "Promoting sustainability and green legal practices."]].map(([Icon, title, body], index) => { const CsrIcon = Icon as typeof Leaf; return <div className="flex gap-4 border-t border-slate-200 pt-5" key={String(title)} data-testid={`csr-item-${index + 1}`}><CsrIcon className="mt-1 size-5 text-[#b45309]" /><div><h3 className="text-sm font-medium" data-testid={`csr-item-title-${index + 1}`}>{title as string}</h3><p className="mt-2 text-sm leading-6 text-slate-500" data-testid={`csr-item-copy-${index + 1}`}>{body as string}</p></div></div>; })}</div></div><div className="border-t border-[#b45309] pt-7 lg:col-span-4 lg:col-start-9"><SectionLabel testId="careers-eyebrow">Join our team</SectionLabel><h2 className="font-heading text-3xl" data-testid="careers-title">Bring your perspective to the table.</h2><p className="mt-5 text-sm leading-7 text-slate-600" data-testid="careers-copy">We are looking for advocates, consultants, legal interns, legal tech and operations talent, and freelance legal managers.</p><a href="mailto:splegalmart@gmail.com?subject=Career application" className="mt-7 inline-flex items-center gap-2 border-b border-[#b45309] pb-2 text-xs font-medium uppercase tracking-[0.14em] text-[#92400e]" data-testid="careers-email-link">Send your CV <ArrowUpRight className="size-4" /></a><p className="mt-5 text-sm text-slate-500" data-testid="careers-email">splegalmart@gmail.com</p></div></section>
 
         <section className="relative overflow-hidden bg-[#0f172a] px-5 py-20 text-white lg:px-8" data-testid="client-tracking-section"><img src={siteContent.global_image} alt="" className="absolute inset-0 size-full object-cover opacity-15" aria-hidden="true" /><div className="relative mx-auto grid max-w-7xl gap-10 lg:grid-cols-12"><div className="lg:col-span-5"><SectionLabel light testId="tracking-eyebrow">Client tracking</SectionLabel><h2 className="font-heading text-4xl" data-testid="tracking-title">Follow your matter with confidence.</h2><p className="mt-5 max-w-md text-sm leading-7 text-slate-300" data-testid="tracking-description">Enter the booking reference shown after submission and the same mobile number used to book.</p>{bookingReference && <div className="mt-7 border border-[#d7a652]/40 bg-white/5 p-5" data-testid="booking-reference-panel"><p className="text-xs uppercase tracking-[0.14em] text-[#d7a652]" data-testid="booking-reference-label">Your booking reference</p><p className="mt-2 break-all font-mono text-sm text-white" data-testid="booking-reference-value">{bookingReference}</p><button type="button" onClick={() => setTrackForm((current) => ({ ...current, id: bookingReference }))} className="mt-3 text-xs font-medium uppercase tracking-[0.12em] text-[#d7a652] hover:text-white" data-testid="use-booking-reference-button">Use this reference</button></div>}</div><div className="bg-white p-6 text-[#0f172a] sm:p-8 lg:col-span-6 lg:col-start-7"><form onSubmit={(event) => { event.preventDefault(); trackingMutation.mutate(trackForm); }} className="grid gap-5 sm:grid-cols-2" data-testid="tracking-form"><div><label htmlFor="tracking-reference" className="mb-2 block text-xs uppercase tracking-[0.12em] text-slate-500" data-testid="tracking-reference-label">Booking reference</label><Input id="tracking-reference" required value={trackForm.id} onChange={(event) => setTrackForm((current) => ({ ...current, id: event.target.value }))} className="rounded-none" data-testid="tracking-reference-input" /></div><div><label htmlFor="tracking-mobile" className="mb-2 block text-xs uppercase tracking-[0.12em] text-slate-500" data-testid="tracking-mobile-label">Mobile number</label><Input id="tracking-mobile" required value={trackForm.mobile} onChange={(event) => setTrackForm((current) => ({ ...current, mobile: event.target.value }))} className="rounded-none" data-testid="tracking-mobile-input" /></div><Button type="submit" disabled={trackingMutation.isPending} className="rounded-none bg-[#b45309] text-white hover:bg-[#92400e] sm:col-span-2" data-testid="tracking-submit-button">{trackingMutation.isPending ? "Checking..." : "Track booking"}</Button></form>{trackingMutation.data && <div className="mt-6 border-t border-slate-200 pt-6" data-testid="tracking-result"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-xs uppercase tracking-[0.12em] text-slate-400" data-testid="tracking-client-name">{trackingMutation.data.full_name}</p><p className="mt-2 font-heading text-2xl capitalize text-[#92400e]" data-testid="tracking-status">{trackingMutation.data.status}</p></div><span className="text-xs text-slate-500" data-testid="tracking-mode-slot">{trackingMutation.data.mode}<br />{trackingMutation.data.slot}</span></div><div className="mt-5 flex gap-2" data-testid="tracking-progress">{(["new", "contacted", "paid", "completed", "closed"] as BookingStatus[]).map((statusValue) => <span className={`h-1 flex-1 ${statusValue === trackingMutation.data?.status || (["new", "contacted", "paid", "completed", "closed"] as BookingStatus[]).indexOf(statusValue) <= (["new", "contacted", "paid", "completed", "closed"] as BookingStatus[]).indexOf(trackingMutation.data!.status) ? "bg-[#b45309]" : "bg-slate-200"}`} key={statusValue} title={statusValue} />)}</div></div>}</div></div></section>
+
+        {trackingMutation.data && <section className="bg-[#eef2f6] px-5 py-12 lg:px-8" data-testid="case-timeline-section"><div className="mx-auto max-w-7xl"><p className="text-xs font-medium uppercase tracking-[0.16em] text-[#b45309]" data-testid="case-timeline-eyebrow">Case timeline</p><h2 className="mt-2 font-heading text-3xl" data-testid="case-timeline-title">Progress for {trackingMutation.data.full_name}</h2><div className="mt-8 grid gap-px bg-slate-300 sm:grid-cols-2 lg:grid-cols-5">{trackingMutation.data.history.map((event, index) => <div className="bg-white p-5" key={`${event.status}-${event.changed_at}-${index}`} data-testid={`case-timeline-event-${index + 1}`}><p className="font-heading text-xl capitalize text-[#92400e]" data-testid={`case-timeline-status-${index + 1}`}>{event.status}</p><p className="mt-2 text-xs text-slate-500" data-testid={`case-timeline-date-${index + 1}`}>{new Date(event.changed_at).toLocaleString()}</p></div>)}</div></div></section>}
 
         <section className="bg-white px-5 py-10 lg:px-8" data-testid="qr-download-section"><div className="mx-auto flex max-w-7xl flex-col justify-between gap-6 border border-slate-200 p-6 sm:flex-row sm:items-center"><div className="flex items-center gap-5"><img src={PHONEPE_QR_URL} alt="SpLegalMart PhonePe payment QR" className="size-20 object-contain" data-testid="qr-download-preview" /><div><p className="text-xs font-medium uppercase tracking-[0.16em] text-[#b45309]" data-testid="qr-download-eyebrow">PhonePe payment</p><h2 className="mt-1 font-heading text-2xl" data-testid="qr-download-title">Keep the payment QR handy.</h2></div></div><a href="/api/payment-qr.png" download="splegalmart-phonepe-qr.png" className="inline-flex items-center justify-center gap-2 bg-[#0f172a] px-5 py-3 text-xs font-medium uppercase tracking-[0.14em] text-white transition-[transform,background-color] hover:-translate-y-1 hover:bg-[#1e293b]" data-testid="payment-qr-download-link">Download QR <Download className="size-4" /></a></div></section>
 

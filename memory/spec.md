@@ -6,7 +6,8 @@ Public-facing global legal consultancy website with a premium, trustworthy legal
 The public catalogue contains 42 service and pricing entries, including fixed-fee items, percentage-based project fees, and scope-based quotes for global services where the brief did not specify a fixed amount. Visitors can filter by category, send a prefilled quote request, and download a branded PDF price list. Admins can update service names, fees, and categories; the public catalogue and generated PDF use the same MongoDB data.
 
 ## Data model
-- `Booking`: `id`, `full_name`, `mobile`, `email`, `mode`, `slot`, `issue_description`, optional `document_name`, `status`, `created_at`.
+- `Booking`: `id`, `full_name`, `mobile`, `email`, `mode`, `slot`, `issue_description`, optional `document_name`, `status`, `created_at`, and dated status `history`.
+- `BookingDocument`: binary PDF/JPG/PNG/DOCX content up to 10 MB, linked to a booking and downloadable only by an authenticated admin.
 - Admin sessions are httpOnly cookie sessions held in memory for this demo pod.
 
 ## Key flows
@@ -17,9 +18,11 @@ The public catalogue contains 42 service and pricing entries, including fixed-fe
 5. Admins can edit pricing and core About/Mission/Vision/Values/Contact content; public queries fall back to bundled defaults if the backend is unavailable.
 6. Visitors can search legal guides, read expanded guidance, and download the supplied PhonePe QR.
 7. Visitors receive a booking reference and can privately track status using that reference plus their mobile number.
-8. A bilingual English/Hindi presentation covers primary navigation, hero, major section headings, and conversion controls.
+8. A bilingual English/Hindi presentation covers primary navigation, hero, major section headings, conversion controls, and all ten legal guides.
 9. Legal guides support native sharing with clipboard fallback.
-10. The three supplied legal artworks and Mr. Shailendra Pandey's leadership portrait are stored as editable media URLs in the content manager.
+10. The three supplied legal artworks and Mr. Shailendra Pandey's leadership portrait (title: Leader) are stored as editable media URLs in the content manager.
+11. Booking documents are uploaded after booking creation, validated by type/size, stored as binary data, and downloadable only by an authenticated admin.
+12. Every status change adds a dated event that clients can see through private booking tracking.
 
 ## Auth and roles
 - One demo admin role, password-protected at `/api/admin/login`.
@@ -28,4 +31,4 @@ The public catalogue contains 42 service and pricing entries, including fixed-fe
 
 ## Intentional demo limits
 - Payment is guidance-only: UPI and the supplied PhonePe QR are displayed; no payment gateway is connected.
-- The booking form stores the selected document filename as a reference; binary document storage is not connected.
+- Resend email status alerts are not enabled because no `RESEND_API_KEY` or verified sender address has been supplied.

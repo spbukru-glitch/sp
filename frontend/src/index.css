@@ -133,6 +133,59 @@
   body { min-width: 320px; }
 }
 
+body {
+  color: #17233a;
+  background-color: #f8fafc;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  color: #ffffff;
+  background: #9a5a17;
+}
+
+main p {
+  text-wrap: pretty;
+}
+
+[data-testid="hero-title"],
+[data-testid="hero-description"],
+[data-testid="mission-title"],
+[data-testid="tracking-title"] {
+  text-shadow: 0 2px 22px rgba(2, 6, 23, .55);
+}
+
+[data-testid="about-title"],
+[data-testid="expertise-title"],
+[data-testid="pricing-title"],
+[data-testid="booking-title"],
+[data-testid="process-title"],
+[data-testid="resources-title"],
+[data-testid="csr-title"],
+[data-testid="contact-title"] {
+  color: #10213b;
+}
+
+[data-testid="about-description"],
+[data-testid="about-description-secondary"],
+[data-testid="expertise-description"],
+[data-testid="pricing-description"],
+[data-testid="booking-description"],
+[data-testid="resources-description"],
+[data-testid="careers-copy"] {
+  color: #43516a;
+}
+
+[data-testid="hero-title-secondary"] {
+  color: #f0bd63;
+}
+
+[data-testid="mission-copy"],
+[data-testid="tracking-description"] {
+  color: #dce5f2;
+}
+
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(18px); }
   to { opacity: 1; transform: translateY(0); }

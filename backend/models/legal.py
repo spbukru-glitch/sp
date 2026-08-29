@@ -15,10 +15,16 @@ class BookingCreate(BaseModel):
     document_name: str | None = Field(default=None, max_length=200)
 
 
+class BookingEvent(BaseModel):
+    status: Literal["new", "contacted", "paid", "completed", "closed"]
+    changed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 class Booking(BookingCreate):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     status: Literal["new", "contacted", "paid", "completed", "closed"] = "new"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    history: list[BookingEvent] = Field(default_factory=list)
 
 
 class BookingStatusUpdate(BaseModel):
@@ -37,6 +43,16 @@ class BookingTracking(BaseModel):
     mode: str
     slot: str
     created_at: datetime
+    history: list[BookingEvent]
+
+
+class BookingDocumentInfo(BaseModel):
+    id: str
+    booking_id: str
+    filename: str
+    content_type: str
+    size: int
+    uploaded_at: datetime
 
 
 class AdminLoginRequest(BaseModel):

@@ -1,10 +1,11 @@
 import os
 import secrets
 import textwrap
+import uuid
 from datetime import datetime, timezone
 
 import httpx
-from fastapi import APIRouter, Cookie, HTTPException, Request, Response, status
+from fastapi import APIRouter, Cookie, File, Form, HTTPException, Request, Response, UploadFile, status
 
 from lib.db import db
 from models.legal import (
@@ -13,6 +14,8 @@ from models.legal import (
     AdminOverview,
     Booking,
     BookingCreate,
+    BookingDocumentInfo,
+    BookingEvent,
     BookingStatusUpdate,
     BookingTrackRequest,
     BookingTracking,
@@ -45,7 +48,7 @@ DEFAULT_CONTENT = {
     "trust_image": "https://customer-assets-0z36b82j.emergentagent.net/job_legal-one-roof/artifacts/yz8fbppw_ChatGPT%20Image%20Jul%2021%2C%202026%2C%2009_32_21%20PM.png",
     "leader_image": "https://customer-assets-0z36b82j.emergentagent.net/job_legal-one-roof/artifacts/1zhoepda_photo.jpg",
     "leader_name": "Mr. Shailendra Pandey",
-    "leader_title": "Founder & Lead Legal Consultant",
+    "leader_title": "Leader",
 }
 
 PRICE_LIST = [
@@ -114,6 +117,12 @@ def _normalise_booking(document: dict) -> Booking:
     created_at = document.get("created_at")
     if isinstance(created_at, datetime) and created_at.tzinfo is None:
         document["created_at"] = created_at.replace(tzinfo=timezone.utc)
+    if not document.get("history"):
+        document["history"] = [{"status": document.get("status", "new"), "changed_at": document["created_at"]}]
+    for event in document["history"]:
+        changed_at = event.get("changed_at")
+        if isinstance(changed_at, datetime) and changed_at.tzinfo is None:
+            event["changed_at"] = changed_at.replace(tzinfo=timezone.utc)
     return Booking(**document)
 
 
@@ -201,7 +210,7 @@ def _make_price_list_pdf(items: list[tuple[str, str]]) -> bytes:
 
 @router.post("/bookings", response_model=Booking, status_code=status.HTTP_201_CREATED)
 async def create_booking(payload: BookingCreate) -> Booking:
-    booking = Booking(**payload.model_dump())
+    booking = Booking(**payload.model_dump(), history=[BookingEvent(status="new")])
     await db.bookings.insert_one(booking.model_dump())
     return booking
 
@@ -219,7 +228,42 @@ async def track_booking(payload: BookingTrackRequest) -> BookingTracking:
         mode=booking.mode,
         slot=booking.slot,
         created_at=booking.created_at,
+        history=booking.history,
     )
+
+
+@router.post("/bookings/{id}/document", response_model=BookingDocumentInfo, status_code=status.HTTP_201_CREATED)
+async def upload_booking_document(
+    id: str,
+    mobile: str = Form(...),
+    file: UploadFile = File(...),
+) -> BookingDocumentInfo:
+    booking = await db.bookings.find_one({"id": id, "mobile": mobile})
+    if not booking:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No booking matched that reference and mobile number")
+    allowed_types = {
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Upload a PDF, JPG, PNG, or DOCX file")
+    content = await file.read(10 * 1024 * 1024 + 1)
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Document must be 10 MB or smaller")
+    document = {
+        "id": str(uuid.uuid4()),
+        "booking_id": id,
+        "filename": file.filename or "document",
+        "content_type": file.content_type,
+        "size": len(content),
+        "uploaded_at": datetime.now(timezone.utc),
+        "content": content,
+    }
+    await db.booking_documents.insert_one(document)
+    await db.bookings.update_one({"id": id}, {"$set": {"document_name": document["filename"]}})
+    return BookingDocumentInfo(**document)
 
 
 @router.get("/pricing", response_model=list[PriceItem])
@@ -328,12 +372,31 @@ async def update_booking_status(
     _require_admin(admin_session)
     updated = await db.bookings.find_one_and_update(
         {"id": id},
-        {"$set": {"status": payload.status}},
+        {
+            "$set": {"status": payload.status},
+            "$push": {"history": BookingEvent(status=payload.status).model_dump()},
+        },
         return_document=True,
     )
     if not updated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
     return _normalise_booking(updated)
+
+
+@router.get("/admin/bookings/{id}/document", response_class=Response)
+async def download_booking_document(
+    id: str,
+    admin_session: str | None = Cookie(default=None),
+) -> Response:
+    _require_admin(admin_session)
+    document = await db.booking_documents.find_one({"booking_id": id}, sort=[("uploaded_at", -1)])
+    if not document:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No document attached to this booking")
+    return Response(
+        content=document["content"],
+        media_type=document["content_type"],
+        headers={"Content-Disposition": f'attachment; filename="{document["filename"]}"'},
+    )
 
 
 @router.patch("/admin/pricing/{id}", response_model=PriceItem)
