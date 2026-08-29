@@ -1,0 +1,38 @@
+from datetime import datetime, timezone
+from typing import Literal
+import uuid
+
+from pydantic import BaseModel, Field
+
+
+class BookingCreate(BaseModel):
+    full_name: str = Field(min_length=2, max_length=120)
+    mobile: str = Field(min_length=7, max_length=30)
+    email: str = Field(min_length=5, max_length=160)
+    mode: Literal["Online video / audio call", "Office visit", "Door-to-door service"]
+    slot: str = Field(min_length=2, max_length=80)
+    issue_description: str = Field(min_length=10, max_length=2000)
+    document_name: str | None = Field(default=None, max_length=200)
+
+
+class Booking(BookingCreate):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    status: Literal["new", "contacted", "closed"] = "new"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class AdminLoginRequest(BaseModel):
+    password: str = Field(min_length=1, max_length=200)
+
+
+class AdminLoginResponse(BaseModel):
+    authenticated: bool
+    message: str
+
+
+class AdminOverview(BaseModel):
+    total_bookings: int
+    new_bookings: int
+    service_count: int
+    pricing_count: int
+    content_sections: int

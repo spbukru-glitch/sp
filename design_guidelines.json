@@ -1,0 +1,180 @@
+{
+  "project_name": "SpLegalMart Global Legal Services",
+  "app_type": "hybrid_fullstack",
+  "theme_strategy": {
+    "default_mode": "light",
+    "rationale": "Light mode is optimal for legal documentation and service reading, fostering trust and clarity. However, high-contrast dark sections (Hero, Footer, key CTAs) will be used to convey a premium, authoritative, 'Old Money Tech' aesthetic."
+  },
+  "typography": {
+    "strategy": "The 'Old Money Tech' Pairing",
+    "headings": {
+      "font_family": "Playfair Display, serif",
+      "weights": ["400", "600", "700"],
+      "usage": "Used for all H1, H2, H3 to bring character, authority, and tension.",
+      "scales": {
+        "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tight leading-none",
+        "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight",
+        "h3": "text-xl sm:text-2xl tracking-tight"
+      }
+    },
+    "body": {
+      "font_family": "IBM Plex Sans, sans-serif",
+      "weights": ["400", "500"],
+      "usage": "Clean, highly readable, objective sans-serif for dense legal information and UI elements.",
+      "scales": {
+        "base": "text-base leading-relaxed",
+        "small": "text-sm",
+        "labels": "text-xs uppercase tracking-[0.2em]"
+      }
+    },
+    "banned_fonts": ["Inter", "Roboto", "Open Sans", "Lato"]
+  },
+  "colors": {
+    "strategy": "Adapted Luxury & Swiss High-Contrast (Authority, Premium, Depth)",
+    "palette": {
+      "primary": {
+        "DEFAULT": "#0F172A",
+        "foreground": "#FFFFFF",
+        "description": "Deep Midnight Blue/Slate - Authority, stability, professionalism"
+      },
+      "secondary": {
+        "DEFAULT": "#B45309",
+        "foreground": "#FFFFFF",
+        "description": "Warm Gold/Brass - Prestige, excellence, accents"
+      },
+      "background": {
+        "DEFAULT": "#F8FAFC",
+        "alt": "#FFFFFF",
+        "dark": "#020617"
+      },
+      "text": {
+        "primary": "#0F172A",
+        "secondary": "#475569",
+        "muted": "#94A3B8"
+      },
+      "surface": {
+        "glass": "bg-white/80 backdrop-blur-xl border border-white/20 shadow-sm",
+        "card": "bg-white border border-slate-200"
+      }
+    },
+    "rules": [
+      "Never use pure #000000 or #808080. Always tint greys with blue (slate).",
+      "Only use secondary (Gold) for primary CTAs and critical accents to limit 'vibration'.",
+      "Ensure normal text meets 4.5:1 contrast, large text 3:1 (WCAG AA)."
+    ]
+  },
+  "spacing_and_layout": {
+    "philosophy": "Generous Spacing & High Density for Data",
+    "marketing_pages": {
+      "grid": "The 'Tetris' Grid (Mode A) for About Us and Features. Asymmetrical, grid-cols-1 md:grid-cols-12 gap-8 to gap-12.",
+      "container_padding": "py-20 md:py-32"
+    },
+    "dashboards": {
+      "grid": "High Density Grid (Mode B) for Admin panel. grid-cols-1 md:grid-cols-4 gap-4.",
+      "style": "Sharp edges, flat backgrounds, 1px subtle borders (border-slate-200)."
+    },
+    "rules": [
+      "Containers with borders must have internal padding (p-6 or p-8) to prevent text collision.",
+      "Images must not exceed 80vh on mobile.",
+      "Avoid standard Bootstrap columns; use overlapping elements and asymmetrical bento layouts."
+    ]
+  },
+  "components": {
+    "marketing": {
+      "structure": "Pure HTML + Tailwind CSS (sections, divs) for creative layout freedom.",
+      "hero": "Dark overlay on image (bg-black/50 to bg-black/30). Explicit text alignment.",
+      "marquee": "The 'Editorial Ribbon' - slow moving, serif font, huge gaps (gap-24), pale background with dark earthy text for partner logos or service keywords."
+    },
+    "interactive": {
+      "forms": "Shadcn Form, Input, Select, DatePicker heavily customized with brand colors and 1px sharp borders.",
+      "buttons": "Sharp or very subtle roundness (rounded-sm). Never pill-shaped for this legal brand. Must have hover states: hover:-translate-y-1 hover:shadow-lg transition-all duration-200.",
+      "navigation": "Crystal Glassmorphism on scroll (backdrop-blur-xl, saturate-150, 1px bottom border). Must have visible links on desktop."
+    },
+    "admin_panel": {
+      "tables": "Shadcn Table with dense spacing.",
+      "cards": "Cardless or flat minimalist rectangular widgets."
+    }
+  },
+  "animations_and_motion": {
+    "libraries": ["framer-motion", "lenis"],
+    "rules": [
+      "Lenis for smooth scrolling momentum to create a premium feel.",
+      "Staggered entrance animations for service lists.",
+      "Subtle micro-interactions on hover (opacity, slight transform).",
+      "No wild bouncing or spinning; keep it professional and authoritative.",
+      "Respect prefers-reduced-motion."
+    ]
+  },
+  "visual_enhancers": {
+    "textures": "Subtle grain/noise overlay on dark sections (Hero, Footer) to break digital flatness.",
+    "icons": "lucide-react with thin stroke widths (1.5) for a sharper, technical look.",
+    "surfaces": "Mix of Flat Solid surfaces for data readability and Crystal Glass for floating navigation/toasts."
+  },
+  "image_urls": {
+    "hero_background": {
+      "url": "https://images.unsplash.com/photo-1784059211920-c1a246b5e025?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NjZ8MHwxfHNlYXJjaHwxfHxjb3Jwb3JhdGUlMjBsYXclMjBvZmZpY2UlMjBtb2Rlcm58ZW58MHx8fHwxNzg3OTc2NzA4fDA&ixlib=rb-4.1.0&q=85",
+      "description": "Sleek glass buildings under a bright blue sky (Use with bg-black/50 overlay)"
+    },
+    "about_us_team": {
+      "url": "https://images.unsplash.com/photo-1758518731462-d091b0b4ed0d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NjZ8MHwxfHNlYXJjaHwyfHxjb3Jwb3JhdGUlMjBsYXclMjBvZmZpY2UlMjBtb2Rlcm58ZW58MHx8fHwxNzg3OTc2NzA4fDA&ixlib=rb-4.1.0&q=85",
+      "description": "Business people signing a contract at a table"
+    },
+    "services_abstract": {
+      "url": "https://images.unsplash.com/photo-1589994965851-a8f479c573a9?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHw0fHxsZWdhbCUyMGdhdmVsJTIwc2NhbGVzJTIwanVzdGljZXxlbnwwfHx8fDE3ODc5NzY3MDh8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Lady justice statue with scales and sword"
+    },
+    "testimonial_1": {
+      "url": "https://images.pexels.com/photos/9623645/pexels-photo-9623645.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "description": "Confident businessman"
+    },
+    "testimonial_2": {
+      "url": "https://images.pexels.com/photos/27086922/pexels-photo-27086922.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "description": "Smiling woman in formal suit"
+    },
+    "testimonial_3": {
+      "url": "https://images.unsplash.com/photo-1573497161161-c3e73707e25c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzF8MHwxfHNlYXJjaHw0fHxidXNpbmVzcyUyMHByb2Zlc3Npb25hbCUyMHBvcnRyYWl0fGVufDB8fHx8MTc4Nzk3NjcwOHww&ixlib=rb-4.1.0&q=85",
+      "description": "Smiling woman sitting on black chair"
+    }
+  },
+  "page_structure": {
+    "navigation": "Sticky glass header with logo (serif), desktop links, 'Book Consultation' CTA.",
+    "hero": "Full height (min-h-[80vh]). Deep image background, bold Serif H1 ('A Global Platform for Legal Solutions'). Primary CTA and secondary 'Explore Services' link.",
+    "marquee": "Slow scrolling ribbon with key services (Litigation, Arbitration, Compliance, Corporate Law).",
+    "about": "Asymmetrical layout (Tetris mode) combining textual mission/vision and the 'signing contract' image.",
+    "services": "Dense, organized bento grid or accordion list showing comprehensive legal services with a clear pricing hook.",
+    "booking": "Split layout: left side value proposition ('24/7 Support, Delivery in 24h'), right side clean Shadcn form with payment instructions.",
+    "testimonials": "Grid of client reviews with provided portrait images.",
+    "floating_actions": "Fixed bottom-right speed dial or stacked icons for WhatsApp/Zoom/Meet.",
+    "footer": "Massive padding (py-24), dark background (#0F172A), oversized brand text, multi-column links."
+  },
+  "accessibility": {
+    "guidelines": [
+      "All interactive elements MUST include a data-testid attribute.",
+      "Ensure color contrast meets APCA/WCAG standards, especially text over the hero image.",
+      "Forms must have aria-labels and clear error states.",
+      "Respect prefers-reduced-motion in all framer-motion setups."
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Install necessary fonts: Playfair Display and IBM Plex Sans via Google Fonts.",
+    "Install lenis (@studio-freight/react-lenis) for smooth scrolling.",
+    "Install framer-motion and lucide-react.",
+    "Use raw HTML/Tailwind for marketing section structures to achieve the asymmetrical layouts—do not strictly use Shadcn Cards everywhere.",
+    "Build the Admin Dashboard at a protected route (/admin) with a simple password gate (admin123) and dense data tables for bookings.",
+    "In the booking form, clearly display the UPI (7992461191@ybl) and PhonePe payment instructions."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "You tend to converge toward generic outputs. Avoid this: make creative, distinctive frontends that surprise and delight.",
+    "Don't make generic centered layouts. Left-align dense text.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Use glass-morphism effects with backdrop filters (12-24px blur) where appropriate.",
+    "You MUST NOT apply universal transition (e.g., transition: all). Add transitions for specific properties.",
+    "You MUST NOT center align the app container (.App { text-align: center; }).",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "Every interaction needs micro-animations (hover states, focus).",
+    "NEVER use placeholder URLs or AI emoji characters for icons.",
+    "Prioritize using pre-existing Shadcn components from src/components/ui.",
+    "Use sonner for toasts notifications.",
+    "Ensure all buttons have explicitly set hover text colors."
+  ]
+}
