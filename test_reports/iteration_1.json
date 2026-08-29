@@ -1,0 +1,121 @@
+{
+  "iteration": 1,
+  "summary": "9/9 backend tests passed, 7/7 browser checks passed. All 8 acceptance criteria exercised.",
+  "passed": 16,
+  "failed": 0,
+  "retest_needed": false,
+  "env_success": true,
+  "checks": [
+    {
+      "criterion": "Supplied legal artwork and leadership portrait are integrated",
+      "name": "artwork-and-leadership-are-integrated",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Hero background img src, booking QR image, leadership photo/name/title, and tracking-section background img all resolve to customer-assets URLs; screenshots captured for hero, booking, about-leadership, tracking-section-bg."
+    },
+    {
+      "criterion": "English/Hindi mode works",
+      "name": "language-toggle-switches-to-hindi",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Toggling language-toggle-button switched nav-link-about to 'परिचय', hero-title-primary to 'विश्वसनीय...', top ribbon and header CTA to Hindi text, then toggled back to English successfully."
+    },
+    {
+      "criterion": "Booking creates a trackable reference",
+      "name": "booking-creates-reference-and-tracking-works",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Submitted booking form; booking-reference-value showed a >10-char UUID reference; 'Use this reference' prefilled tracking-reference-input with the same value."
+    },
+    {
+      "criterion": "Booking creates a trackable reference",
+      "name": "test_booking_create_returns_uuid_reference",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /bookings -> 201, response id parses as valid uuid.UUID, status='new'."
+    },
+    {
+      "criterion": "Client tracking is private and accurate",
+      "name": "booking-creates-reference-and-tracking-works",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Tracking with correct mobile showed tracking-status='new'; tracking with mobile '0000000000' triggered the 'Booking not found' error toast instead of a result."
+    },
+    {
+      "criterion": "Client tracking is private and accurate",
+      "name": "test_tracking_correct_mobile_returns_status_and_wrong_mobile_rejected",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /bookings/track with correct mobile -> 200 with matching status/mode/slot; same id with mobile '0000000000' -> 404."
+    },
+    {
+      "criterion": "Knowledge guides are searchable and shareable",
+      "name": "knowledge-guides-search-and-share",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Searching 'property' narrowed article-results below the unfiltered count; opening a card showed selected-article-point-1; clicking article-share-button (clipboard permission granted) showed 'Guide link copied' toast; searching 'bail' also returned >=1 card."
+    },
+    {
+      "criterion": "Admin booking statuses are manageable",
+      "name": "admin-booking-status-management",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Logged in with admin123; fixture booking (tscheck-admin-status-*) row visible in admin-bookings-table; status select moved new -> contacted (toast 'Booking status updated', value persisted) -> paid, both reflected live in the select without reload."
+    },
+    {
+      "criterion": "Admin booking statuses are manageable",
+      "name": "test_admin_can_transition_booking_through_statuses",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "PATCH /admin/bookings/{id}/status through contacted/paid/completed/closed each returned 200 with matching status; GET /admin/bookings confirmed final status='closed'. Companion test confirmed GET /admin/bookings -> 401 without a session cookie."
+    },
+    {
+      "criterion": "Admin content and media manager works",
+      "name": "admin-content-editor-updates-public-site",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Edited mission and leadership name fields with a tscheck-content-* marker, saved (toast 'Website content updated'), then confirmed mission-copy and leadership-name on the public homepage contained the marker. Original content restored via API afterwards."
+    },
+    {
+      "criterion": "Admin content and media manager works",
+      "name": "test_admin_updates_content_and_media_reflect_on_public_endpoint",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "PATCH /admin/content with updated about/leader_name/leader_title/hero_image -> 200, and subsequent GET /content returned the same updated values; record restored to original afterwards. Companion test confirmed PATCH /admin/content -> 401 without auth."
+    },
+    {
+      "criterion": "Pricing and downloads remain functional",
+      "name": "pricing-filter-and-quote-prefill",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "pricing-catalogue-count showed 42 entries; Property category filter reduced pricing-filter-count below 42 (and 'All' restored 'Showing 42 of 42'); clicking a 'Request quote' button on a scope-based row showed 'Quote request prepared' toast and prefilled booking-issue-textarea."
+    },
+    {
+      "criterion": "Pricing and downloads remain functional",
+      "name": "test_pricing_catalogue_has_42_entries_and_is_categorised",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /pricing -> 200, len(items)==42, every item has name/fee/group, 'Property' present in groups."
+    },
+    {
+      "criterion": "Pricing and downloads remain functional",
+      "name": "test_price_list_pdf_download_returns_valid_pdf",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /price-list.pdf -> 200, content-type application/pdf, body starts with %PDF-, Content-Disposition attachment, size >500 bytes."
+    },
+    {
+      "criterion": "Pricing and downloads remain functional",
+      "name": "test_payment_qr_download_returns_image",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /payment-qr.png -> 200, content-type image/png, Content-Disposition attachment, size >100 bytes."
+    }
+  ],
+  "bugs": [],
+  "action_items": [
+    {
+      "note": "Admin.tsx keeps `authenticated` only in local React state (no session-check query on mount), so an admin who reloads /admin lands back on the login screen even though the httpOnly session cookie is still valid server-side. Not a violation of the stated acceptance criterion ('the saved state remains visible', which only requires the status change to remain visible in the running session) so it is filed as a note rather than a bug, but worth a follow-up UX fix (e.g. a GET /admin/overview probe on mount to restore session state)."
+    }
+  ]
+}

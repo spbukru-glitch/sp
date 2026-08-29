@@ -29,7 +29,7 @@ interface Booking { id: string; full_name: string; mobile: string; email: string
 interface BookingStatusUpdate { status: BookingStatus }
 interface PriceItem { id: string; name: string; fee: string; group: string; sort_order: number }
 interface PriceItemUpdate { name: string; fee: string; group: string }
-interface SiteContent { about: string; mission: string; vision: string; values: string; head_office: string; branch_office: string; phone: string; whatsapp: string; email: string; hours: string }
+interface SiteContent { about: string; mission: string; vision: string; values: string; head_office: string; branch_office: string; phone: string; whatsapp: string; email: string; hours: string; hero_image: string; global_image: string; trust_image: string; leader_image: string; leader_name: string; leader_title: string }
 type SiteContentUpdate = SiteContent;
 
 const priceGroups = ["Consultation", "Corporate", "Disputes", "Property", "Compliance", "Global", "Projects", "Employment", "Government", "Drafting", "Access"];
@@ -45,14 +45,16 @@ export default function Admin() {
 
   const loginMutation = useMutation({
     mutationFn: () => apiPost<AdminLoginResponse>("/admin/login", { password }),
-    onSuccess: (result) => { setAuthenticated(result.authenticated); setPassword(""); toast.success("Admin access granted"); },
+    onSuccess: (result) => { setAuthenticated(result.authenticated); setPassword(""); queryClient.setQueryData(["admin-session"], result); toast.success("Admin access granted"); },
     onError: () => toast.error("Incorrect password", { description: "Use the demo credential from the handoff." }),
   });
-  const logoutMutation = useMutation({ mutationFn: () => apiPost<void>("/admin/logout"), onSuccess: () => { setAuthenticated(false); queryClient.clear(); } });
-  const overviewQuery = useQuery({ queryKey: ["admin-overview"], queryFn: () => apiGet<AdminOverview>("/admin/overview"), enabled: authenticated, retry: false });
-  const bookingsQuery = useQuery({ queryKey: ["admin-bookings"], queryFn: () => apiGet<Booking[]>("/admin/bookings"), enabled: authenticated, retry: false });
-  const pricingQuery = useQuery({ queryKey: ["pricing"], queryFn: () => apiGet<PriceItem[]>("/pricing"), enabled: authenticated, retry: false });
-  const contentQuery = useQuery({ queryKey: ["site-content"], queryFn: () => apiGet<SiteContent>("/content"), enabled: authenticated, retry: false });
+  const sessionQuery = useQuery({ queryKey: ["admin-session"], queryFn: () => apiGet<AdminLoginResponse>("/admin/session"), retry: false });
+  const sessionActive = authenticated || sessionQuery.data?.authenticated === true;
+  const logoutMutation = useMutation({ mutationFn: () => apiPost<void>("/admin/logout"), onSuccess: () => { setAuthenticated(false); queryClient.setQueryData(["admin-session"], { authenticated: false, message: "Signed out" }); queryClient.removeQueries({ queryKey: ["admin-overview"] }); queryClient.removeQueries({ queryKey: ["admin-bookings"] }); } });
+  const overviewQuery = useQuery({ queryKey: ["admin-overview"], queryFn: () => apiGet<AdminOverview>("/admin/overview"), enabled: sessionActive, retry: false });
+  const bookingsQuery = useQuery({ queryKey: ["admin-bookings"], queryFn: () => apiGet<Booking[]>("/admin/bookings"), enabled: sessionActive, retry: false });
+  const pricingQuery = useQuery({ queryKey: ["pricing"], queryFn: () => apiGet<PriceItem[]>("/pricing"), enabled: sessionActive, retry: false });
+  const contentQuery = useQuery({ queryKey: ["site-content"], queryFn: () => apiGet<SiteContent>("/content"), enabled: sessionActive, retry: false });
   const priceMutation = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: PriceItemUpdate }) => apiPatch<PriceItem>(`/admin/pricing/${id}`, payload),
     onSuccess: async () => {
@@ -88,7 +90,11 @@ export default function Admin() {
     setDraft({ name: item.name, fee: item.fee, group: item.group });
   };
 
-  if (!authenticated) {
+  if (sessionQuery.isLoading && !authenticated) {
+    return <div className="flex min-h-screen items-center justify-center bg-[#0f172a] text-xs uppercase tracking-[0.16em] text-slate-400" data-testid="admin-session-loading">Checking admin session...</div>;
+  }
+
+  if (!sessionActive) {
     return (
       <div className="min-h-screen bg-[#0f172a] px-5 py-8 text-white sm:px-8" data-testid="admin-login-page">
         <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center">
@@ -161,6 +167,10 @@ export default function Admin() {
             <div><label htmlFor="content-whatsapp" className="mb-2 block text-xs uppercase tracking-[0.12em] text-slate-500" data-testid="admin-content-whatsapp-label">WhatsApp</label><Input id="content-whatsapp" value={contentDraft.whatsapp} onChange={(event) => setContentDraft((current) => current ? { ...current, whatsapp: event.target.value } : current)} className="rounded-none" data-testid="admin-content-whatsapp-input" /></div>
             <div><label htmlFor="content-email" className="mb-2 block text-xs uppercase tracking-[0.12em] text-slate-500" data-testid="admin-content-email-label">Email</label><Input id="content-email" type="email" value={contentDraft.email} onChange={(event) => setContentDraft((current) => current ? { ...current, email: event.target.value } : current)} className="rounded-none" data-testid="admin-content-email-input" /></div>
             <div><label htmlFor="content-hours" className="mb-2 block text-xs uppercase tracking-[0.12em] text-slate-500" data-testid="admin-content-hours-label">Operating hours</label><Input id="content-hours" value={contentDraft.hours} onChange={(event) => setContentDraft((current) => current ? { ...current, hours: event.target.value } : current)} className="rounded-none" data-testid="admin-content-hours-input" /></div>
+            <div className="border-t border-slate-200 pt-6 lg:col-span-2"><p className="text-xs font-medium uppercase tracking-[0.14em] text-[#b45309]" data-testid="admin-media-heading">Media library</p><p className="mt-2 text-sm text-slate-500" data-testid="admin-media-description">Manage the three legal artwork backgrounds and leadership profile supplied for the website.</p></div>
+            {(["hero_image", "global_image", "trust_image", "leader_image"] as const).map((field) => <div key={field}><label htmlFor={`content-${field}`} className="mb-2 block text-xs uppercase tracking-[0.12em] text-slate-500" data-testid={`admin-content-${field}-label`}>{field.replaceAll("_", " ")}</label><Input id={`content-${field}`} value={contentDraft[field]} onChange={(event) => setContentDraft((current) => current ? { ...current, [field]: event.target.value } : current)} className="rounded-none" data-testid={`admin-content-${field}-input`} /><img src={contentDraft[field]} alt="" className="mt-3 h-24 w-full border border-slate-200 object-cover" aria-hidden="true" /></div>)}
+            <div><label htmlFor="content-leader-name" className="mb-2 block text-xs uppercase tracking-[0.12em] text-slate-500" data-testid="admin-content-leader-name-label">Leadership name</label><Input id="content-leader-name" value={contentDraft.leader_name} onChange={(event) => setContentDraft((current) => current ? { ...current, leader_name: event.target.value } : current)} className="rounded-none" data-testid="admin-content-leader-name-input" /></div>
+            <div><label htmlFor="content-leader-title" className="mb-2 block text-xs uppercase tracking-[0.12em] text-slate-500" data-testid="admin-content-leader-title-label">Leadership title</label><Input id="content-leader-title" value={contentDraft.leader_title} onChange={(event) => setContentDraft((current) => current ? { ...current, leader_title: event.target.value } : current)} className="rounded-none" data-testid="admin-content-leader-title-input" /></div>
             <div className="flex gap-3 lg:col-span-2"><Button type="submit" disabled={contentMutation.isPending} className="rounded-none bg-[#b45309] text-white hover:bg-[#92400e]" data-testid="admin-content-save-button"><Save className="mr-2 size-4" />{contentMutation.isPending ? "Saving..." : "Save content"}</Button><Button type="button" variant="outline" onClick={() => setContentDraft(null)} className="rounded-none" data-testid="admin-content-cancel-button">Cancel</Button></div>
           </form> : contentQuery.data ? <div className="grid gap-px bg-slate-200 sm:grid-cols-2 lg:grid-cols-4" data-testid="admin-content-preview"><div className="bg-white p-6"><p className="text-xs uppercase tracking-[0.12em] text-slate-400">About</p><p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-600" data-testid="admin-content-about-preview">{contentQuery.data.about}</p></div><div className="bg-white p-6"><p className="text-xs uppercase tracking-[0.12em] text-slate-400">Mission</p><p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-600" data-testid="admin-content-mission-preview">{contentQuery.data.mission}</p></div><div className="bg-white p-6"><p className="text-xs uppercase tracking-[0.12em] text-slate-400">Contact</p><p className="mt-3 text-sm leading-6 text-slate-600" data-testid="admin-content-contact-preview">{contentQuery.data.phone}<br />{contentQuery.data.email}</p></div><div className="bg-white p-6"><p className="text-xs uppercase tracking-[0.12em] text-slate-400">Hours</p><p className="mt-3 text-sm leading-6 text-slate-600" data-testid="admin-content-hours-preview">{contentQuery.data.hours}</p></div></div> : null}
         </section>

@@ -16,11 +16,15 @@ The public catalogue contains 42 service and pricing entries, including fixed-fe
 4. Admins can progress bookings through New, Contacted, Paid, Completed, and Closed states.
 5. Admins can edit pricing and core About/Mission/Vision/Values/Contact content; public queries fall back to bundled defaults if the backend is unavailable.
 6. Visitors can search legal guides, read expanded guidance, and download the supplied PhonePe QR.
+7. Visitors receive a booking reference and can privately track status using that reference plus their mobile number.
+8. A bilingual English/Hindi presentation covers primary navigation, hero, major section headings, and conversion controls.
+9. Legal guides support native sharing with clipboard fallback.
+10. The three supplied legal artworks and Mr. Shailendra Pandey's leadership portrait are stored as editable media URLs in the content manager.
 
 ## Auth and roles
 - One demo admin role, password-protected at `/api/admin/login`.
 - Demo password is documented in `memory/test_credentials.md`.
-- Admin session is an httpOnly cookie; logout revokes it in the current backend process.
+- Admin session is an httpOnly cookie; `/api/admin/session` restores the dashboard after refresh, and logout revokes it in the current backend process.
 
 ## Intentional demo limits
 - Payment is guidance-only: UPI and the supplied PhonePe QR are displayed; no payment gateway is connected.

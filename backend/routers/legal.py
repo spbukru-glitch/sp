@@ -14,6 +14,8 @@ from models.legal import (
     Booking,
     BookingCreate,
     BookingStatusUpdate,
+    BookingTrackRequest,
+    BookingTracking,
     PriceItem,
     PriceItemUpdate,
     SiteContent,
@@ -38,6 +40,12 @@ DEFAULT_CONTENT = {
     "whatsapp": "+91 7992461191",
     "email": "splegalmart@gmail.com",
     "hours": "24/7 — round the clock",
+    "hero_image": "https://customer-assets-0z36b82j.emergentagent.net/job_legal-one-roof/artifacts/lxrnvjy5_ChatGPT%20Image%20Jul%2021%2C%202026%2C%2008_58_44%20PM.png",
+    "global_image": "https://customer-assets-0z36b82j.emergentagent.net/job_legal-one-roof/artifacts/5yzmdd6m_ChatGPT%20Image%20Jul%2021%2C%202026%2C%2009_17_01%20PM.png",
+    "trust_image": "https://customer-assets-0z36b82j.emergentagent.net/job_legal-one-roof/artifacts/yz8fbppw_ChatGPT%20Image%20Jul%2021%2C%202026%2C%2009_32_21%20PM.png",
+    "leader_image": "https://customer-assets-0z36b82j.emergentagent.net/job_legal-one-roof/artifacts/1zhoepda_photo.jpg",
+    "leader_name": "Mr. Shailendra Pandey",
+    "leader_title": "Founder & Lead Legal Consultant",
 }
 
 PRICE_LIST = [
@@ -126,7 +134,11 @@ async def _ensure_pricing_seeded() -> None:
 
 
 async def _ensure_content_seeded() -> None:
-    if await db.site_content.find_one({"id": "site-content"}):
+    existing = await db.site_content.find_one({"id": "site-content"})
+    if existing:
+        missing = {key: value for key, value in DEFAULT_CONTENT.items() if key not in existing}
+        if missing:
+            await db.site_content.update_one({"id": "site-content"}, {"$set": missing})
         return
     await db.site_content.insert_one(DEFAULT_CONTENT.copy())
 
@@ -194,6 +206,22 @@ async def create_booking(payload: BookingCreate) -> Booking:
     return booking
 
 
+@router.post("/bookings/track", response_model=BookingTracking)
+async def track_booking(payload: BookingTrackRequest) -> BookingTracking:
+    document = await db.bookings.find_one({"id": payload.id, "mobile": payload.mobile})
+    if not document:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No booking matched that reference and mobile number")
+    booking = _normalise_booking(document)
+    return BookingTracking(
+        id=booking.id,
+        full_name=booking.full_name,
+        status=booking.status,
+        mode=booking.mode,
+        slot=booking.slot,
+        created_at=booking.created_at,
+    )
+
+
 @router.get("/pricing", response_model=list[PriceItem])
 async def public_pricing() -> list[PriceItem]:
     await _ensure_pricing_seeded()
@@ -250,10 +278,20 @@ async def admin_login(payload: AdminLoginRequest, response: Response) -> AdminLo
     return AdminLoginResponse(authenticated=True, message="Welcome to the SpLegalMart admin desk")
 
 
+@router.get("/admin/session", response_model=AdminLoginResponse)
+async def admin_session_status(admin_session: str | None = Cookie(default=None)) -> AdminLoginResponse:
+    authenticated = bool(admin_session and admin_session in _admin_sessions)
+    return AdminLoginResponse(
+        authenticated=authenticated,
+        message="Admin session active" if authenticated else "Admin login required",
+    )
+
+
 @router.post("/admin/logout", status_code=status.HTTP_204_NO_CONTENT)
-async def admin_logout(response: Response, admin_session: str | None = Cookie(default=None)) -> Response:
+async def admin_logout(admin_session: str | None = Cookie(default=None)) -> Response:
     if admin_session:
         _admin_sessions.discard(admin_session)
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
     response.delete_cookie("admin_session")
     return response
 

@@ -25,6 +25,20 @@ class BookingStatusUpdate(BaseModel):
     status: Literal["new", "contacted", "paid", "completed", "closed"]
 
 
+class BookingTrackRequest(BaseModel):
+    id: str = Field(min_length=4, max_length=80)
+    mobile: str = Field(min_length=7, max_length=30)
+
+
+class BookingTracking(BaseModel):
+    id: str
+    full_name: str
+    status: Literal["new", "contacted", "paid", "completed", "closed"]
+    mode: str
+    slot: str
+    created_at: datetime
+
+
 class AdminLoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=200)
 
@@ -67,6 +81,12 @@ class SiteContent(BaseModel):
     whatsapp: str
     email: str
     hours: str
+    hero_image: str
+    global_image: str
+    trust_image: str
+    leader_image: str
+    leader_name: str
+    leader_title: str
 
 
 class SiteContentUpdate(SiteContent):
