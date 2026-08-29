@@ -16,7 +16,7 @@ from models.legal import (
 router = APIRouter()
 _admin_sessions: set[str] = set()
 _service_count = 6
-_pricing_count = 35
+_pricing_count = 42
 _content_sections = 8
 
 

@@ -3,6 +3,8 @@
 ## Product
 Public-facing global legal consultancy website with a premium, trustworthy legal-brand presentation. Visitors can explore expertise, pricing, mission and values, CSR, careers, resources, contact details, and submit a consultation booking.
 
+The public catalogue contains 42 service and pricing entries, including fixed-fee items, percentage-based project fees, and scope-based quotes for global services where the brief did not specify a fixed amount.
+
 ## Data model
 - `Booking`: `id`, `full_name`, `mobile`, `email`, `mode`, `slot`, `issue_description`, optional `document_name`, `status`, `created_at`.
 - Admin sessions are httpOnly cookie sessions held in memory for this demo pod.
