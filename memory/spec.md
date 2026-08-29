@@ -3,6 +3,8 @@
 ## Product
 Public-facing global legal consultancy website with a premium, trustworthy legal-brand presentation. Visitors can explore expertise, pricing, mission and values, CSR, careers, resources, contact details, and submit a consultation booking.
 
+The public site includes the complete original expertise directory, a dedicated "Why Choose" commitment section, and repeated high-visibility messaging for door-to-door visits, 24-hour delivery, and the 100% delayed-delivery fee refund commitment across hero, service, pricing, booking, and mobile conversion surfaces.
+
 The public catalogue contains 42 service and pricing entries, including fixed-fee items, percentage-based project fees, and scope-based quotes for global services where the brief did not specify a fixed amount. Visitors can filter by category, send a prefilled quote request, and download a branded PDF price list. Admins can update service names, fees, and categories; the public catalogue and generated PDF use the same MongoDB data.
 
 ## Data model

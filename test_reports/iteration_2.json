@@ -1,0 +1,75 @@
+{
+  "iteration": 2,
+  "summary": "10/10 backend tests passed (9 pre-existing + 1 new), 7/7 new browser checks passed. All 8 acceptance criteria in this briefing exercised.",
+  "passed": 17,
+  "failed": 0,
+  "retest_needed": false,
+  "env_success": true,
+  "checks": [
+    {
+      "criterion": "Hero highlights core service commitments",
+      "name": "hero-shows-service-badges",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "hero-door-to-door-badge, hero-refund-badge ('100% Refund if Delivery is Delayed'), hero-delivery-badge ('Delivery Within 24 Hours') all visible alongside hero-title and both hero CTAs (hero-book-consultation-button, hero-explore-services-link) unobscured."
+    },
+    {
+      "criterion": "Dedicated guarantee section is clear and actionable",
+      "name": "guarantee-section-shows-doorstep-cta",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "service-guarantee-section visible with guarantee-title 'Legal help at your door...', guarantee-description mentioning '100% fee refund', why-choose-grid, and book-door-to-door-button CTA."
+    },
+    {
+      "criterion": "All original expertise areas are represented",
+      "name": "complete-services-directory-shows-all-31",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "complete-services-list rendered exactly 31 [data-testid^='complete-service-name-'] rows; clients-served-copy contained 'Multinational corporations', 'Growing startups', and 'Individual clients and investors'."
+    },
+    {
+      "criterion": "Why Choose content is complete",
+      "name": "why-choose-grid-shows-all-ten",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "why-choose-grid rendered exactly 10 [data-testid^='why-choose-text-'] items; spot-checked text for 24x7, door-to-door, transparent pricing, PAN India, confidentiality, technology, and client-first reasons."
+    },
+    {
+      "criterion": "Door-to-door pricing is prominent",
+      "name": "complete-services-directory-shows-all-31",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Same check also asserted door-to-door-pricing-fee contains '999' and refund-pricing-copy contains '100%' within the public complete-services section."
+    },
+    {
+      "criterion": "Door-to-door pricing is prominent",
+      "name": "test_pricing_catalogue_contains_door_to_door_entry_at_999_plus_travel",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /pricing -> 200, 42 items; entry with 'door-to-door' in name has fee containing both '999' and 'travel'."
+    },
+    {
+      "criterion": "Doorstep CTAs preselect booking mode",
+      "name": "guarantee-section-shows-doorstep-cta",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Clicking book-door-to-door-button set booking-mode-select value to 'Door-to-door service' and scrolled the booking-form into view."
+    },
+    {
+      "criterion": "Mobile service CTA works",
+      "name": "mobile-service-cta-preselects-doorstep",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "At 390x844 viewport, mobile-service-cta bar visible with mobile-door-to-door-button ('Book Door-to-Door') and mobile-refund-guarantee ('100% Delay Refund'); hero-title still visible (not blocked); clicking the button set booking-mode-select to 'Door-to-door service'."
+    },
+    {
+      "criterion": "Core public flow remains healthy",
+      "name": "core-public-flow-healthy",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "No pageerror/requestfailed events fired; hero and booking-form rendered; pricing search for 'property' reduced pricing-filter-count below 'Showing 42 of 42'; submitted a tscheck- fixture booking and booking-reference-value appeared."
+    }
+  ],
+  "bugs": [],
+  "action_items": []
+}
