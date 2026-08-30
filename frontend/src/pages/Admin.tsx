@@ -26,7 +26,7 @@ interface AdminLoginResponse { authenticated: boolean; message: string }
 interface AdminOverview { total_bookings: number; new_bookings: number; service_count: number; pricing_count: number; content_sections: number }
 type BookingStatus = "new" | "contacted" | "paid" | "completed" | "closed";
 interface BookingEvent { status: BookingStatus; changed_at: string }
-interface Booking { id: string; full_name: string; mobile: string; email: string; mode: string; slot: string; issue_description: string; document_name?: string | null; status: BookingStatus; created_at: string; history: BookingEvent[] }
+interface Booking { id: string; full_name: string; mobile: string; email: string; mode: string; slot: string; issue_description: string; document_name?: string | null; visit_address?: string | null; visit_window?: string | null; status: BookingStatus; created_at: string; history: BookingEvent[] }
 interface BookingStatusUpdate { status: BookingStatus }
 interface PriceItem { id: string; name: string; fee: string; group: string; sort_order: number }
 interface PriceItemUpdate { name: string; fee: string; group: string }

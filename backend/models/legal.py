@@ -13,6 +13,8 @@ class BookingCreate(BaseModel):
     slot: str = Field(min_length=2, max_length=80)
     issue_description: str = Field(min_length=10, max_length=2000)
     document_name: str | None = Field(default=None, max_length=200)
+    visit_address: str | None = Field(default=None, max_length=500)
+    visit_window: str | None = Field(default=None, max_length=120)
 
 
 class BookingEvent(BaseModel):

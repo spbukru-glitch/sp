@@ -8,7 +8,7 @@ The public site includes the complete original expertise directory, a dedicated 
 The public catalogue contains 42 service and pricing entries, including fixed-fee items, percentage-based project fees, and scope-based quotes for global services where the brief did not specify a fixed amount. Visitors can filter by category, send a prefilled quote request, and download a branded PDF price list. Admins can update service names, fees, and categories; the public catalogue and generated PDF use the same MongoDB data.
 
 ## Data model
-- `Booking`: `id`, `full_name`, `mobile`, `email`, `mode`, `slot`, `issue_description`, optional `document_name`, `status`, `created_at`, and dated status `history`.
+- `Booking`: `id`, `full_name`, `mobile`, `email`, `mode`, `slot`, `issue_description`, optional `document_name`, optional doorstep `visit_address`/`visit_window`, `status`, `created_at`, and dated status `history`.
 - `BookingDocument`: binary PDF/JPG/PNG/DOCX content up to 10 MB, linked to a booking and downloadable only by an authenticated admin.
 - Admin sessions are httpOnly cookie sessions held in memory for this demo pod.
 
